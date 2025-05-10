@@ -517,8 +517,12 @@ async def rm_prm(bot, message):
 async def prm_list(bot, message):
     tx = await message.reply('Getting list of premium users')
     pr = [i['id'] for i in db.get_premium_users() if i['status']['premium']]
-    btn = []
+    t = 'premium users saved in database are:\n\n'
     for p in pr:
-        btn.append([InlineKeyboardButton(text=p, user_id=p)])
-    await tx.edit_text('premium users saved in database are:', reply_markup=InlineKeyboardMarkup(btn))
+        try:
+            u = await bot.get_users(p)
+            t += f"{u.mention} : {p}\n"
+        except:
+            t += f"{p}\n"
+    await tx.edit_text(t)
 
