@@ -27,9 +27,9 @@
 - [x] 𝐴𝑢𝑡𝑜 𝐷𝑒𝑙𝑒𝑡𝑒
 - [x] 𝐴𝑛𝑑 𝑀𝑜𝑟𝑒...
 
-## Demo Bot
-* [Try this bot](https://t.me/HA_Auto_Filter_Test_Bot)
-* Here bot you can test features and more before deploy your own bot
+## Demo Bot(s)
+* [Demo Bot 1](https://t.me/TestbotAf_bot)
+* [Demo Bot 2](https://t.me/HA_Auto_Filter_Test_Bot)
 
 ## 𝐶𝑜𝑚𝑚𝑎𝑛𝑑𝑠
 ```
