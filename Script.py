@@ -7,7 +7,7 @@ class script(object):
     MY_ABOUT_TXT = """★ Server: <a href=https://www.heroku.com>Heroku</a>
 ★ Database: <a href=https://www.mongodb.com>MongoDB</a>
 ★ Language: <a href=https://www.python.org>Python</a>
-★ Library: <a href=https://t.me/HydrogramNews>Hydrogram</a>"""
+★ Library: <a href=https://t.me/Pyrofork_CH>Pyrofork</a>"""
 
     MY_OWNER_TXT = """★ Name: HA Bots
 ★ Username: @HA_Bots
@@ -48,8 +48,8 @@ I can't find the <b>{}</b> in my database! 🥲
 
 🏷 Title: <a href={url}>{title}</a>
 🎭 Genres: {genres}
-📆 Year: <a href={url}/releaseinfo>{year}</a>
-🌟 Rating: <a href={url}/ratings>{rating} / 10</a>
+📆 Year: {year}
+🌟 Rating: {rating} / 10
 ☀️ Languages: {languages}
 📀 RunTime: {runtime} Minutes
 

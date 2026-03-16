@@ -1,16 +1,14 @@
-from hydrogram.errors import UserNotParticipant, FloodWait
-from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE
-from imdb import Cinemagoer
+from pyrogram.errors import UserNotParticipant, FloodWait
+from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE, TMDB_API_KEY
 import asyncio
-from hydrogram.types import InlineKeyboardButton
-from hydrogram import enums
+from pyrogram.types import InlineKeyboardButton
+from pyrogram import enums
 import re
 from datetime import datetime
 from database.users_chats_db import db
 from shortzy import Shortzy
 import requests, pytz
 
-imdb = Cinemagoer() 
 
 class temp(object):
     START_TIME = 0
@@ -71,81 +69,138 @@ def upload_image(file_path):
         return None
 
 
+def list_to_str(k):
+    if not k:
+        return "N/A"
+    elif len(k) == 1:
+        return str(k[0])
+    else:
+        return ", ".join(str(i) for i in k)
+
+
 async def get_poster(query, bulk=False, id=False, file=None):
+    TMDB_BASE = "https://api.themoviedb.org/3"
+
+    year = None
+    title = query
+
     if not id:
-        query = (query.strip()).lower()
-        title = query
-        year = re.findall(r'[1-2]\d{3}$', query, re.IGNORECASE)
-        if year:
-            year = list_to_str(year[:1])
-            title = (query.replace(year, "")).strip()
-        elif file is not None:
-            year = re.findall(r'[1-2]\d{3}', file, re.IGNORECASE)
-            if year:
-                year = list_to_str(year[:1]) 
-        else:
-            year = None
-        movieid = imdb.search_movie(title.lower(), results=10)
-        if not movieid:
+        query = query.strip()
+
+        year_match = re.findall(r"[1-2]\d{3}$", query)
+        if year_match:
+            year = year_match[0]
+            title = query.replace(year, "").strip()
+
+        elif file:
+            file_year = re.findall(r"[1-2]\d{3}", file)
+            if file_year:
+                year = file_year[0]
+
+        url = f"{TMDB_BASE}/search/multi"
+        params = {
+            "api_key": TMDB_API_KEY,
+            "query": title
+        }
+
+        res = requests.get(url, params=params).json()
+
+        results = [
+            r for r in res.get("results", [])
+            if r.get("media_type") in ["movie", "tv"]
+        ]
+
+        if not results:
             return None
+
         if year:
-            filtered=list(filter(lambda k: str(k.get('year')) == str(year), movieid))
-            if not filtered:
-                filtered = movieid
-        else:
-            filtered = movieid
-        movieid=list(filter(lambda k: k.get('kind') in ['movie', 'tv series'], filtered))
-        if not movieid:
-            movieid = filtered
+            filtered = []
+            for r in results:
+                release = r.get("release_date") or r.get("first_air_date")
+                if release and release.startswith(str(year)):
+                    filtered.append(r)
+
+            if filtered:
+                results = filtered
+
         if bulk:
-            return movieid
-        movieid = movieid[0].movieID
+            _bulk = []
+            for r in results:
+                _title = r.get("title") or r.get("name")
+                if _title:
+                    _bulk.append({
+                        "title": _title,
+                        "id": r["id"]
+                        })
+            return _bulk
+
+
+        data = results[0]
+        tmdb_id = data["id"]
+        media_type = data["media_type"]
+
     else:
-        movieid = query
-    movie = imdb.get_movie(movieid)
-    if movie.get("original air date"):
-        date = movie["original air date"]
-    elif movie.get("year"):
-        date = movie.get("year")
+        tmdb_id = query
+
+        movie_test = requests.get(
+            f"{TMDB_BASE}/movie/{tmdb_id}",
+            params={"api_key": TMDB_API_KEY}
+        )
+
+        if movie_test.status_code == 200:
+            media_type = "movie"
+            data = movie_test.json()
+        else:
+            media_type = "tv"
+            data = requests.get(
+                f"{TMDB_BASE}/tv/{tmdb_id}",
+                params={"api_key": TMDB_API_KEY}
+            ).json()
+
+    if not id:
+        data = requests.get(
+            f"{TMDB_BASE}/{media_type}/{tmdb_id}",
+            params={"api_key": TMDB_API_KEY}
+        ).json()
+
+    title = data.get("title") or data.get("name")
+
+    poster = None
+    if data.get("poster_path"):
+        poster = f"https://image.tmdb.org/t/p/original{data['poster_path']}"
+
+    release_date = data.get("release_date") or data.get("first_air_date")
+
+    genres = list_to_str([g["name"] for g in data.get("genres", [])])
+
+    runtime = None
+    if media_type == "movie":
+        runtime = data.get("runtime")
     else:
-        date = "N/A"
-    plot = ""
-    if not LONG_IMDB_DESCRIPTION:
-        plot = movie.get('plot')
-        if plot and len(plot) > 0:
-            plot = plot[0]
-    else:
-        plot = movie.get('plot outline')
-    if plot and len(plot) > 800:
-        plot = plot[0:800] + "..."
+        runtime = list_to_str(data.get("episode_run_time"))
+
+    plot = data.get("overview")
+
+    rating = data.get("vote_average")
+    votes = data.get("vote_count")
+    languages = list_to_str([l["english_name"] for l in data.get("spoken_languages", [])])
+    countries = list_to_str([c["name"] for c in data.get("production_countries", [])])
+
     return {
-        'title': movie.get('title'),
-        'votes': movie.get('votes'),
-        "aka": list_to_str(movie.get("akas")),
-        "seasons": movie.get("number of seasons"),
-        "box_office": movie.get('box office'),
-        'localized_title': movie.get('localized title'),
-        'kind': movie.get("kind"),
-        "imdb_id": f"tt{movie.get('imdbID')}",
-        "cast": list_to_str(movie.get("cast")),
-        "runtime": list_to_str(movie.get("runtimes")),
-        "countries": list_to_str(movie.get("countries")),
-        "certificates": list_to_str(movie.get("certificates")),
-        "languages": list_to_str(movie.get("languages")),
-        "director": list_to_str(movie.get("director")),
-        "writer":list_to_str(movie.get("writer")),
-        "producer":list_to_str(movie.get("producer")),
-        "composer":list_to_str(movie.get("composer")) ,
-        "cinematographer":list_to_str(movie.get("cinematographer")),
-        "music_team": list_to_str(movie.get("music department")),
-        "distributors": list_to_str(movie.get("distributors")),
-        'release_date': date,
-        'year': movie.get('year'),
-        'genres': list_to_str(movie.get("genres")),
-        'poster': movie.get('full-size cover url'),
-        'plot': plot,
-        'rating': str(movie.get("rating")),
-        'url':f'https://www.imdb.com/title/tt{movieid}'
+        "title": title,
+        "tmdb_id": tmdb_id,
+        "kind": media_type,
+        "languages": languages,
+        "countries": countries,
+        "release_date": release_date,
+        "year": release_date[:4] if release_date else None,
+        "genres": genres,
+        "runtime": runtime,
+        "rating": rating,
+        "votes": votes,
+        "poster": poster,
+        "plot": plot,
+        "url": f"https://www.themoviedb.org/{media_type}/{tmdb_id}"
     }
 
 async def is_check_admin(bot, chat_id, user_id):
@@ -262,14 +317,7 @@ def get_size(size):
         size /= 1024.0
     return "%.2f %s" % (size, units[i])
 
-def list_to_str(k):
-    if not k:
-        return "N/A"
-    elif len(k) == 1:
-        return str(k[0])
-    else:
-        return ', '.join(f'{elem}' for elem in k)
-    
+
 async def get_shortlink(url, api, link):
     shortzy = Shortzy(api_key=api, base_site=url)
     link = await shortzy.convert(link)

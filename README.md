@@ -64,6 +64,7 @@
 * `API_ID`: Get this value from [telegram.org](https://my.telegram.org/apps)
 * `API_HASH`: Get this value from [telegram.org](https://my.telegram.org/apps)
 * `ADMINS`: ID of Admins. (Multiple admins can be used separated by space)
+* `TMDB_API_KEY`: API key for TMDb to get TMDb data. Get API key from [here](https://www.themoviedb.org/settings/api)
 * `FILES_DATABASE_URL`: MongoDB URL for 1st files database. Get this value from [MongoDB](https://www.mongodb.com). For more help watch this [video](https://youtu.be/1G1XwEOnxxo)
 * `DATA_DATABASE_URL`: for save user, group, etc data.
 * `LOG_CHANNEL` : A channel to log the activities of bot. add channel id and Make sure bot is an admin in the channel.
@@ -162,7 +163,7 @@ sudo docker logs Auto-Filter-Bot
 ```
 
 ## Thanks To
-* [Hydrogram](https://github.com/hydrogram/hydrogram) For Telegram MTProto API Framework
+* [Pyrofork](https://github.com/Mayuri-Chan/pyrofork) For Telegram MTProto API Framework
 * [Contributors](https://github.com/HA-Bots/Auto-Filter-Bot/graphs/contributors) For free helps
 * And to everyone who helped
 
