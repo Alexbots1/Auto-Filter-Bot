@@ -10,7 +10,12 @@ logger = logging.getLogger(__name__)
 import os
 import time
 import asyncio
-import uvloop
+try:
+    import uvloop
+    ul = True
+except:
+    ul = False
+    pass
 from pyrogram import types
 from pyrogram import Client
 from pyrogram.errors import FloodWait
@@ -23,7 +28,8 @@ from database.users_chats_db import db
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
 
-uvloop.install()
+if ul:
+    uvloop.install()
 
 class Bot(Client):
     def __init__(self):

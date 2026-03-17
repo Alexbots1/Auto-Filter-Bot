@@ -96,8 +96,6 @@ Just try my commands"""
 
 You can activate any premium plan and then you can get exclusive features.
 
-- INR {} for pre day -
-
 Basic premium features:
 Ad free experience
 Online watch and fast download
@@ -107,7 +105,7 @@ No shortlink
 Admins support
 And more...
 
-Support: {}"""
+Support: @{}"""
 
     USER_COMMAND_TXT = """<b>Here is bot user commands 👇
 
