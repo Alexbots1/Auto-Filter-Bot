@@ -152,16 +152,6 @@ sudo docker logs Auto-Filter-Bot
 * [![EvaMaria](https://img.shields.io/static/v1?label=EvaMaria&message=Developers&color=critical)](https://t.me/TeamEvamaria)
 * [![Hansaka](https://img.shields.io/static/v1?label=Hansaka&message=TG&color=critical)](https://t.me/Hansaka_Anuhas)
 
-## Donate
-* If you feel like showing your appreciation for this project, then how about buying me a coffee.
-
-<a href="https://www.buymeacoffee.com/hansakaanuhas" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me A Coffee" style="height: 60px !important;width: 217px !important;" ></a>
-
-* 💸 USDT (Solana Network) Address:
-```
-9bzgrqQNHYbkfguxFzyXsH9CaS6umrNBJ7X8UQq5L367
-```
-
 ## Thanks To
 * [Pyrofork](https://github.com/Mayuri-Chan/pyrofork) For Telegram MTProto API Framework
 * [Contributors](https://github.com/HA-Bots/Auto-Filter-Bot/graphs/contributors) For free helps
