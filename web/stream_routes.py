@@ -5,13 +5,13 @@ from info import BIN_CHANNEL
 from utils import temp
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
-from web.utils.render_template import media_watch
+from web.utils.render_template import media_watch, home_tmplt, error_tmplt
 
 routes = web.RouteTableDef()
 
 @routes.get("/", allow_head=True)
 async def root_route_handler(request):
-    return web.Response(text='<h1 align="center"><a href="https://t.me/HA_Bots"><b>HA Bots</b></a></h1>', content_type='text/html')
+    return web.Response(text=home_tmplt, content_type='text/html')
 
 
 @routes.get("/watch/{message_id}")
@@ -20,7 +20,7 @@ async def watch_handler(request):
         message_id = int(request.match_info['message_id'])
         return web.Response(text=await media_watch(message_id), content_type='text/html')
     except Exception as e:
-        return web.Response(text="<h1>Something went wrong</h1>", content_type='text/html')
+        return web.Response(text=error_tmplt, content_type='text/html')
 
 @routes.get("/download/{message_id}")
 async def download_handler(request):
@@ -28,7 +28,7 @@ async def download_handler(request):
         message_id = int(request.match_info['message_id'])
         return await media_download(request, message_id)
     except:
-        return web.Response(text="<h1>Something went wrong</h1>", content_type='text/html')
+        return web.Response(text=error_tmplt, content_type='text/html')
         
 
 async def media_download(request, message_id: int):
