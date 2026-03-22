@@ -41,7 +41,7 @@ class TGCustomYield:
         if media_session is None:
             if data.dc_id != await client.storage.dc_id():
                 media_session = Session(
-                    client, data.dc_id, await Auth(client, data.dc_id, await client.storage.test_mode()).create(),
+                    client, data.dc_id, await Auth(client, data.dc_id, await client.storage.server_address(), await client.storage.port(), await client.storage.test_mode()).create(),
                     await client.storage.test_mode(), is_media=True
                 )
                 await media_session.start()
