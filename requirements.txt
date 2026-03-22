@@ -1,4 +1,4 @@
-kurigram
+kurigram==2.2.19
 tgcrypto
 pymongo
 shortzy
