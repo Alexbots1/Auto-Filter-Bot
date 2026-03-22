@@ -1,5 +1,5 @@
-pyrofork==2.3.57
-TgCrypto-pyrofork
+kurigram
+tgcrypto
 pymongo
 shortzy
 aiohttp

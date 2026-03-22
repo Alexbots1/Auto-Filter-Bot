@@ -32,6 +32,9 @@ async def send_for_index(bot, message):
         return await message.reply('Wait until previous process complete.')
     i = await message.reply("Forward last message or send last message link.")
     msg = await bot.listen(chat_id=message.chat.id, user_id=message.from_user.id)
+    if not msg:
+        await i.delete()
+        return await message.reply('Timeout!')
     await i.delete()
     if msg.text and msg.text.startswith("https://t.me"):
         try:
@@ -59,6 +62,9 @@ async def send_for_index(bot, message):
 
     s = await message.reply("Send skip message number.")
     msg = await bot.listen(chat_id=message.chat.id, user_id=message.from_user.id)
+    if not msg:
+        await s.delete()
+        return await message.reply('Timeout!')
     await s.delete()
     try:
         skip = int(msg.text)

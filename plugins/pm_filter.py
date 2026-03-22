@@ -3,12 +3,11 @@ import re
 from time import time as time_now
 import math, os
 import random
-from pyrogram.errors import ListenerTimeout
 from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty
 from Script import script
 from datetime import datetime, timedelta
 from info import IS_PREMIUM, PICS, TUTORIAL, SHORTLINK_API, SHORTLINK_URL, OWNER_USERNAME, ONE_WEEK_STARS, ONE_MONTH_STARS, THREE_MONTHS_STARS, SIX_MONTHS_STARS, ONE_YEAR_STARS, SECOND_FILES_DATABASE_URL, ADMINS, URL, MAX_BTN, BIN_CHANNEL, IS_STREAM, DELETE_TIME, FILMS_LINK, LOG_CHANNEL, SUPPORT_GROUP, SUPPORT_LINK, UPDATES_LINK, LANGUAGES, QUALITY
-from pyrogram.types import LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
+from pyrogram.types import PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto
 from pyrogram import Client, filters, enums
 from utils import is_premium, get_size, is_subscribed, is_check_admin, get_wish, get_shortlink, get_readable_time, get_poster, temp, get_settings, save_group_settings
 from database.users_chats_db import db
@@ -19,15 +18,16 @@ BUTTONS = {}
 CAP = {}
 
 
-# payment confirmation
+# payment handle
 @Client.on_pre_checkout_query()
-async def pre_checkout(client, query):
-    await query.answer(success=True)
+async def pre_checkout(client, query: PreCheckoutQuery):
+    await query.answer(ok=True)
 
+# payment confirmation
 @Client.on_message(filters.successful_payment)
-async def payment_successful(client, message):
+async def payment_successful(client, message: Message):
     user = message.from_user
-    payload = message.successful_payment.payload
+    payload = message.successful_payment.invoice_payload 
 
     plans = {
         "plan_week": 7,
@@ -832,11 +832,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
             return await query.answer("You not admin in this group.", show_alert=True)
         m = await query.message.edit('Send imdb template with formats')
         msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'template', msg.text)
-        await m.delete()
         btn = [[
             InlineKeyboardButton('Back', callback_data=f'imdb_setgs#{grp_id}')
         ]]
+        if not msg:
+            await m.delete()
+            return await query.message.reply('Timeout!', reply_markup=InlineKeyboardMarkup(btn))
+        await save_group_settings(int(grp_id), 'template', msg.text)
+        await m.delete()
         await query.message.reply('Successfully changed template', reply_markup=InlineKeyboardMarkup(btn))
 
     elif query.data.startswith("default_imdb"):
@@ -872,11 +875,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
             return await query.answer("You not admin in this group.", show_alert=True)
         m = await query.message.edit('Send Welcome with formats')
         msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'welcome_text', msg.text)
-        await m.delete()
         btn = [[
             InlineKeyboardButton('Back', callback_data=f'welcome_setgs#{grp_id}')
         ]]
+        if not msg:
+            await m.delete()
+            return await query.message.reply('Timeout!', reply_markup=InlineKeyboardMarkup(btn))
+        await save_group_settings(int(grp_id), 'welcome_text', msg.text)
+        await m.delete()
         await query.message.reply('Successfully changed Welcome', reply_markup=InlineKeyboardMarkup(btn))
 
     elif query.data.startswith("default_welcome"):
@@ -913,11 +919,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
             return await query.answer("You not admin in this group.", show_alert=True)
         m = await query.message.edit('Send tutorial link')
         msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'tutorial', msg.text)
-        await m.delete()
         btn = [[
             InlineKeyboardButton('Back', callback_data=f'tutorial_setgs#{grp_id}')
         ]]
+        if not msg:
+            await m.delete()
+            return await query.message.reply('Timeout!', reply_markup=InlineKeyboardMarkup(btn))
+        await save_group_settings(int(grp_id), 'tutorial', msg.text)
+        await m.delete()
         await query.message.reply('Successfully changed tutorial link', reply_markup=InlineKeyboardMarkup(btn))
 
     elif query.data.startswith("default_tutorial"):
@@ -952,17 +961,23 @@ async def cb_handler(client: Client, query: CallbackQuery):
         userid = query.from_user.id if query.from_user else None
         if not await is_check_admin(client, int(grp_id), userid):
             return await query.answer("You not admin in this group.", show_alert=True)
-        m = await query.message.edit('Send shortlink url')
-        url_msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await m.delete()
-        k = await query.message.reply('Send shortlink api key')
-        key_msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'url', url_msg.text)
-        await save_group_settings(int(grp_id), 'api', key_msg.text)
-        await k.delete()
         btn = [[
             InlineKeyboardButton('Back', callback_data=f'shortlink_setgs#{grp_id}')
         ]]
+        m = await query.message.edit('Send shortlink url')
+        url_msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
+        if not url_msg:
+            await m.delete()
+            return await query.message.reply('Timeout!', reply_markup=InlineKeyboardMarkup(btn))
+        await m.delete()
+        k = await query.message.reply('Send shortlink api key')
+        key_msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
+        if not key_msg:
+            await m.delete()
+            return await query.message.reply('Timeout!', reply_markup=InlineKeyboardMarkup(btn))
+        await save_group_settings(int(grp_id), 'url', url_msg.text)
+        await save_group_settings(int(grp_id), 'api', key_msg.text)
+        await k.delete()
         await query.message.reply('Successfully changed shortlink', reply_markup=InlineKeyboardMarkup(btn))
 
     elif query.data.startswith("default_shortlink"):
@@ -1000,11 +1015,14 @@ async def cb_handler(client: Client, query: CallbackQuery):
             return await query.answer("You not admin in this group.", show_alert=True)
         m = await query.message.edit('Send caption with formats')
         msg = await client.listen(chat_id=query.message.chat.id, user_id=query.from_user.id)
-        await save_group_settings(int(grp_id), 'caption', msg.text)
-        await m.delete()
         btn = [[
             InlineKeyboardButton('Back', callback_data=f'caption_setgs#{grp_id}')
         ]]
+        if not msg:
+            await m.delete()
+            return await query.message.reply('Timeout!', reply_markup=InlineKeyboardMarkup(btn))
+        await save_group_settings(int(grp_id), 'caption', msg.text)
+        await m.delete()
         await query.message.reply('Successfully changed caption', reply_markup=InlineKeyboardMarkup(btn))
 
 

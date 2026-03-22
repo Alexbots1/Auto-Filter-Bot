@@ -69,7 +69,7 @@ class TGCustomYield:
                     raise AuthBytesInvalid
             else:
                 media_session = Session(
-                    client, data.dc_id, await client.storage.auth_key(),
+                    client, data.dc_id, await client.storage.server_address(), await client.storage.port(), await client.storage.auth_key(),
                     await client.storage.test_mode(), is_media=True
                 )
                 await media_session.start()

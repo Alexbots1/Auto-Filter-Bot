@@ -153,7 +153,7 @@ sudo docker logs Auto-Filter-Bot
 * [![Hansaka](https://img.shields.io/static/v1?label=Hansaka&message=TG&color=critical)](https://t.me/Hansaka_Anuhas)
 
 ## Thanks To
-* [Pyrofork](https://github.com/Mayuri-Chan/pyrofork) For Telegram MTProto API Framework
+* [Kurigram](https://github.com/KurimuzonAkuma/kurigram) For Telegram MTProto API Framework
 * [Contributors](https://github.com/HA-Bots/Auto-Filter-Bot/graphs/contributors) For free helps
 * And to everyone who helped
 

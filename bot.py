@@ -13,14 +13,16 @@ import asyncio
 try:
     import uvloop
     ul = True
-except:
+except ImportError:
     ul = False
     pass
-from pyrogram import types
-from pyrogram import Client
+
+from pyrogram import types, Client, StopPropagation
+from pyrogram.handlers import MessageHandler
 from pyrogram.errors import FloodWait
 from aiohttp import web
 from typing import Union, Optional, AsyncGenerator
+
 from web import web_app
 from info import INDEX_CHANNELS, SUPPORT_GROUP, LOG_CHANNEL, API_ID, DATA_DATABASE_URL, API_HASH, BOT_TOKEN, PORT, BIN_CHANNEL, ADMINS, SECOND_FILES_DATABASE_URL, FILES_DATABASE_URL
 from utils import temp, get_readable_time, check_premium
@@ -40,8 +42,40 @@ class Bot(Client):
             bot_token=BOT_TOKEN,
             plugins={"root": "plugins"}
         )
+        self.listeners = {}
+        self.add_handler(MessageHandler(self._listener_handler), group=-1)
 
-    async def start(self):
+    async def _listener_handler(self, client: Client, message: types.Message):
+        if not message.chat or not message.from_user:
+            return
+        
+        listener_id = (message.chat.id, message.from_user.id)
+        if listener_id in self.listeners:
+            future = self.listeners[listener_id]
+            if not future.done():
+                future.set_result(message)
+            raise StopPropagation
+
+    async def listen(self, chat_id: int, user_id: int, timeout: int = 60) -> Optional[types.Message]:
+        future = asyncio.get_event_loop().create_future()
+        listener_id = (chat_id, user_id)
+        
+        if listener_id in self.listeners:
+            old_future = self.listeners[listener_id]
+            if not old_future.done():
+                old_future.cancel()
+                
+        self.listeners[listener_id] = future
+        
+        try:
+            message = await asyncio.wait_for(future, timeout)
+            return message
+        except asyncio.TimeoutError:
+            return None
+        finally:
+            self.listeners.pop(listener_id, None)
+
+    async def start(self, **kwargs):
         await super().start()
         temp.START_TIME = time.time()
         b_users, b_chats = await db.get_banned()
@@ -75,34 +109,11 @@ class Bot(Client):
             exit()
         logger.info(f"@{me.username} is started now ✓")
 
-    async def stop(self, *args):
+    async def stop(self, **kwargs):
         await super().stop()
         logger.info("Bot Stopped! Bye...")
 
-    async def iter_messages(self: Client, chat_id: Union[int, str], limit: int, offset: int = 0) -> Optional[AsyncGenerator["types.Message", None]]:
-        """Iterate through a chat sequentially.
-        This convenience method does the same as repeatedly calling :meth:`~pyrogram.Client.get_messages` in a loop, thus saving
-        you from the hassle of setting up boilerplate code. It is useful for getting the whole chat messages with a
-        single call.
-        Parameters:
-            chat_id (``int`` | ``str``):
-                Unique identifier (int) or username (str) of the target chat.
-                For your personal cloud (Saved Messages) you can simply use "me" or "self".
-                For a contact that exists in your Telegram address book you can use his phone number (str).
-                
-            limit (``int``):
-                Identifier of the last message to be returned.
-                
-            offset (``int``, *optional*):
-                Identifier of the first message to be returned.
-                Defaults to 0.
-        Returns:
-            ``Generator``: A generator yielding :obj:`~pyrogram.types.Message` objects.
-        Example:
-            .. code-block:: python
-                async for message in app.iter_messages("HA_Bots", 1000, 100):
-                    print(message.text)
-        """
+    async def iter_messages(self: Client, chat_id: Union[int, str], limit: int, offset: int = 0) -> Optional[AsyncGenerator[types.Message, None]]:
         current = offset
         while True:
             new_diff = min(200, limit - current)
