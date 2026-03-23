@@ -46,9 +46,9 @@ async def send_for_index(bot, message):
         except:
             await message.reply('Invalid message link!')
             return
-    elif msg.forward_from_chat and msg.forward_from_chat.type == enums.ChatType.CHANNEL:
-        last_msg_id = msg.forward_from_message_id
-        chat_id = msg.forward_from_chat.username or msg.forward_from_chat.id
+    elif msg.forward_origin and msg.forward_origin.type == enums.MessageOriginType.CHANNEL:
+        last_msg_id = msg.forward_origin.message_id 
+        chat_id = msg.forward_origin.chat.username or msg.forward_origin.chat.id
     else:
         await message.reply('This is not forwarded message or link.')
         return
