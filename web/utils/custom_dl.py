@@ -37,7 +37,7 @@ class TGCustomYield:
         data = await self.generate_file_properties(msg)
         media_session = client.media_sessions.get(data.dc_id, None)
         if media_session is None:
-            await client.get_session(dc_id=data.dc_id, is_media=True)
+            media_session = await client.get_session(dc_id=data.dc_id, is_media=True)
         return media_session
 
     @staticmethod
