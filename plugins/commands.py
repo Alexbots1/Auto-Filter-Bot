@@ -4,7 +4,6 @@ import string
 import asyncio
 from time import time as time_now
 from time import monotonic
-import datetime
 from Script import script
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
@@ -42,7 +41,7 @@ async def start(client, message):
         await client.send_message(LOG_CHANNEL, script.NEW_USER_TXT.format(message.from_user.mention, message.from_user.id))
 
     verify_status = await get_verify_status(message.from_user.id)
-    if verify_status['is_verified'] and datetime.datetime.now() > verify_status['expire_time']:
+    if verify_status['is_verified'] and datetime.now() > verify_status['expire_time']:
         await update_verify_status(message.from_user.id, is_verified=False)
 
 
@@ -94,10 +93,10 @@ async def start(client, message):
 
     if mc.startswith('verify'):
         _, token = mc.split("_", 1)
-        verify_status = await get_verify_status(message.from_user.id)
+        verify_status = (await get_verify_status(message.from_user.id)).copy()
         if verify_status['verify_token'] != token:
             return await message.reply("Your verify token is invalid.")
-        expiry_time = datetime.datetime.now() + datetime.timedelta(seconds=VERIFY_EXPIRE)
+        expiry_time = datetime.now() + timedelta(seconds=VERIFY_EXPIRE)
         await update_verify_status(message.from_user.id, is_verified=True, expire_time=expiry_time)
         if verify_status["link"] == "":
             reply_markup = None
