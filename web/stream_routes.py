@@ -1,11 +1,12 @@
 import math
 import secrets
 import mimetypes
-from info import BIN_CHANNEL
-from utils import temp
+from info import BIN_CHANNEL, MAX_BTN
+from utils import temp, get_size
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
-from web.utils.render_template import media_watch, home_tmplt, error_tmplt
+from web.utils.render_template import media_watch, home_tmplt, error_tmplt, webapp_template
+from database.ia_filterdb import get_search_results
 
 routes = web.RouteTableDef()
 
@@ -30,6 +31,36 @@ async def download_handler(request):
     except:
         return web.Response(text=error_tmplt, content_type='text/html')
         
+@routes.get("/webapp", allow_head=True)
+async def webapp_route_handler(request):
+    return web.Response(text=webapp_template, content_type='text/html')
+
+@routes.get("/api/search")
+async def api_search_handler(request):
+    query = request.query.get('q', '').strip()
+    offset = int(request.query.get('offset', 0))
+  
+    files, next_offset, total_results = await get_search_results(query, offset=offset)
+    
+    formatted_files = []
+    if files:
+        for file in files:
+            formatted_files.append({
+                "id": str(file['_id']),
+                "name": file.get('file_name', 'Unknown'),
+                "size": get_size(file.get('file_size', 0))
+            })
+ 
+    return web.json_response({
+        "files": formatted_files,
+        "next_offset": next_offset if next_offset != '' else None,
+        "total_results": total_results,
+        "current_offset": offset,
+        "max_btn": MAX_BTN,
+        "bot_username": temp.U_NAME
+    })
+
+
 
 async def media_download(request, message_id: int):
     range_header = request.headers.get('Range', 0)

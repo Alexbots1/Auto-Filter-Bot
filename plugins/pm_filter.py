@@ -7,7 +7,7 @@ from pyrogram.errors.exceptions.bad_request_400 import MediaEmpty, PhotoInvalidD
 from Script import script
 from datetime import datetime, timedelta
 from info import IS_PREMIUM, PICS, TUTORIAL, SHORTLINK_API, SHORTLINK_URL, OWNER_USERNAME, ONE_WEEK_STARS, ONE_MONTH_STARS, THREE_MONTHS_STARS, SIX_MONTHS_STARS, ONE_YEAR_STARS, SECOND_FILES_DATABASE_URL, ADMINS, URL, MAX_BTN, BIN_CHANNEL, IS_STREAM, DELETE_TIME, FILMS_LINK, LOG_CHANNEL, SUPPORT_GROUP, SUPPORT_LINK, UPDATES_LINK, LANGUAGES, QUALITY
-from pyrogram.types import PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, LinkPreviewOptions
+from pyrogram.types import WebAppInfo, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, LinkPreviewOptions
 from pyrogram import Client, filters, enums
 from utils import is_premium, get_size, is_subscribed, is_check_admin, get_wish, get_shortlink, get_readable_time, get_poster, temp, get_settings, save_group_settings
 from database.users_chats_db import db
@@ -695,6 +695,8 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('📚 ᴀʙᴏᴜᴛ', callback_data='about')
         ],[
             InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")
+        ],[
+            InlineKeyboardButton('🌐 Mini WebApp 🌐', style=enums.ButtonStyle.SUCCESS, web_app=WebAppInfo(url=URL + 'webapp'))
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await query.edit_message_media(

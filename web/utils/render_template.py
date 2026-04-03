@@ -4,6 +4,447 @@ from web.utils.custom_dl import TGCustomYield
 import urllib.parse
 import aiofiles, html
 
+webapp_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Media Search</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg-dark: #0f172a;
+            --bg-light: #1e293b;
+            --accent: var(--tg-theme-button-color, #3b82f6);
+            --text-main: var(--tg-theme-text-color, #f8fafc);
+            --text-muted: var(--tg-theme-hint-color, #94a3b8);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-dark) 0%, #164e63 100%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            min-height: 100vh;
+            padding: 20px 16px;
+            padding-bottom: 90px; /* Space for pagination */
+        }
+
+        /* Header & Greeting */
+        .header {
+            margin-bottom: 24px;
+            text-align: left;
+            animation: fadeInDown 0.5s ease;
+        }
+
+        .greeting {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 4px;
+            letter-spacing: -0.5px;
+        }
+
+        .greeting-name {
+            color: var(--accent);
+            background: -webkit-linear-gradient(45deg, var(--accent), #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* Search Bar Setup */
+        .search-container {
+            display: flex;
+            gap: 12px;
+            position: sticky;
+            top: 10px;
+            z-index: 10;
+            margin-bottom: 24px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            padding: 10px;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            animation: fadeInUp 0.5s ease 0.1s both;
+        }
+
+        input[type="text"] {
+            flex-grow: 1;
+            padding: 14px 18px;
+            border-radius: 12px;
+            border: 1px solid transparent;
+            background: rgba(0, 0, 0, 0.2);
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+            background: rgba(0, 0, 0, 0.3);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+        }
+
+        input[type="text"]::placeholder {
+            color: var(--text-muted);
+        }
+
+        .search-btn {
+            background: var(--accent);
+            color: #ffffff;
+            border: none;
+            border-radius: 12px;
+            padding: 0 20px;
+            font-weight: 600;
+            font-size: 15px;
+            cursor: pointer;
+            transition: transform 0.1s, background 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Results List */
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .file-card {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 14px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            animation: fadeInUp 0.4s ease;
+            backdrop-filter: blur(8px);
+        }
+
+        .file-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .file-card:active {
+            transform: scale(0.98);
+        }
+
+        .file-info {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            padding-right: 15px;
+        }
+
+        .file-name {
+            font-weight: 500;
+            font-size: 15px;
+            line-height: 1.4;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            margin-bottom: 8px;
+            color: #e2e8f0;
+        }
+
+        .file-size {
+            font-size: 12px;
+            font-weight: 600;
+            color: #cbd5e1;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 4px 8px;
+            border-radius: 6px;
+            display: inline-block;
+            width: max-content;
+        }
+
+        .get-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            background: rgba(59, 130, 246, 0.15);
+            color: var(--accent);
+            border-radius: 50%;
+            font-size: 18px;
+            flex-shrink: 0;
+            transition: background 0.3s;
+        }
+        
+        .file-card:hover .get-icon {
+            background: var(--accent);
+            color: white;
+        }
+
+        /* Pagination Setup */
+        .pagination {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 32px);
+            max-width: 400px;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border);
+            padding: 12px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            z-index: 20;
+        }
+
+        .page-btn {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-main);
+            border: 1px solid var(--glass-border);
+            padding: 10px 18px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .page-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .page-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .page-indicator {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--accent);
+            background: rgba(0, 0, 0, 0.2);
+            padding: 8px 16px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,0.1);
+        }
+
+        .loader {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+            font-weight: 500;
+            display: none;
+            animation: pulse 1.5s infinite;
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1 class="greeting">Hello, <span id="userName" class="greeting-name">Loading...</span> 👋</h1>
+        <p class="subtitle">Search the database for movies and series</p>
+    </div>
+
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Type a movie or series name..." onkeypress="handleEnter(event)">
+        <button class="search-btn" onclick="performSearch()">Search</button>
+    </div>
+
+    <div id="loader" class="loader">Searching the database...</div>
+    <div id="results" class="results-container"></div>
+
+    <div id="pagination" class="pagination">
+        <button id="backBtn" class="page-btn" onclick="changePage('back')">« Back</button>
+        <div id="pageIndicator" class="page-indicator">1/1</div>
+        <button id="nextBtn" class="page-btn" onclick="changePage('next')">Next »</button>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.expand();
+        
+        // Setup Greeting Logic
+        const user = tg.initDataUnsafe?.user;
+        const userNameElement = document.getElementById('userName');
+        
+        if (user && user.first_name) {
+            // User accessed via Telegram
+            userNameElement.innerText = user.first_name;
+        } else {
+            // User accessed via direct browser link
+            userNameElement.innerText = "Guest";
+        }
+
+        const userId = user?.id || 'unknown';
+
+        let currentQuery = '';
+        let currentOffset = 0;
+        let nextOffset = null;
+        let botUsername = '';
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') performSearch();
+        }
+
+        async function performSearch(offset = 0) {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) return;
+
+            currentQuery = query;
+            currentOffset = offset;
+
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('loader').style.display = 'block';
+            document.getElementById('pagination').style.display = 'none';
+
+            try {
+                // Fetch from the backend API
+                const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}`);
+                const data = await response.json();
+                botUsername = data.bot_username;
+                
+                document.getElementById('loader').style.display = 'none';
+                renderResults(data);
+                renderPagination(data);
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } catch (error) {
+                document.getElementById('loader').innerText = 'Connection error. Please try again.';
+            }
+        }
+
+        function renderResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!data.files || data.files.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div style="text-align:center; padding:40px 20px; color:var(--text-muted); background: var(--glass-bg); border-radius: 14px; border: 1px dashed var(--glass-border);">
+                        No results found for "${currentQuery}".<br>Try checking your spelling.
+                    </div>`;
+                return;
+            }
+
+            data.files.forEach((file, index) => {
+                const card = document.createElement('div');
+                card.className = 'file-card';
+                // Add staggered animation delay
+                card.style.animationDelay = `${index * 0.05}s`;
+                
+                card.innerHTML = `
+                    <div class="file-info">
+                        <span class="file-name">${file.name}</span>
+                        <span class="file-size">${file.size}</span>
+                    </div>
+                    <div class="get-icon">➔</div>
+                `;
+
+                card.onclick = () => {
+                    const payload = `file_${userId}_${file.id}`;
+                    const link = `https://t.me/${botUsername}?start=${payload}`;
+                    
+                    // Direct browser handling fallback
+                    if (userId === 'unknown') {
+                        window.open(link, '_blank');
+                    } else {
+                        tg.openTelegramLink(link);
+                    }
+                };
+
+                resultsDiv.appendChild(card);
+            });
+        }
+
+        function renderPagination(data) {
+            const pagDiv = document.getElementById('pagination');
+            nextOffset = data.next_offset;
+
+            if (data.total_results <= data.max_btn) {
+                pagDiv.style.display = 'none';
+                return;
+            }
+
+            pagDiv.style.display = 'flex';
+
+            const totalPages = Math.ceil(data.total_results / data.max_btn);
+            const currentPage = Math.ceil(data.current_offset / data.max_btn) + 1;
+
+            document.getElementById('pageIndicator').innerText = `${currentPage} / ${totalPages}`;
+
+            const backBtn = document.getElementById('backBtn');
+            if (data.current_offset > 0) {
+                backBtn.style.visibility = 'visible';
+                backBtn.disabled = false;
+            } else {
+                backBtn.style.visibility = 'hidden';
+            }
+
+            const nextBtn = document.getElementById('nextBtn');
+            if (nextOffset !== null) {
+                nextBtn.style.visibility = 'visible';
+                nextBtn.disabled = false;
+            } else {
+                nextBtn.style.visibility = 'hidden';
+            }
+        }
+
+        function changePage(direction) {
+            if (direction === 'next' && nextOffset !== null) {
+                performSearch(nextOffset);
+            } else if (direction === 'back') {
+                const maxBtn = 10; 
+                let prevOffset = currentOffset - maxBtn;
+                if (prevOffset < 0) prevOffset = 0;
+                performSearch(prevOffset);
+            }
+        }
+    </script>
+</body>
+</html>
+"""
 # ─────────────────────────────────────────────────────────────────────────────
 # WATCH PAGE TEMPLATE  (route: /watch/{id})
 # ─────────────────────────────────────────────────────────────────────────────

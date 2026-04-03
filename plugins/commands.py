@@ -6,7 +6,7 @@ from time import time as time_now
 from time import monotonic
 from Script import script
 from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions, WebAppInfo
 from database.ia_filterdb import db_count_documents, second_db_count_documents, get_file_details, delete_files
 from database.users_chats_db import db
 from datetime import datetime, timedelta
@@ -57,6 +57,8 @@ async def start(client, message):
             InlineKeyboardButton('📚 ᴀʙᴏᴜᴛ', callback_data='about')
         ],[
             InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")
+        ],[
+            InlineKeyboardButton('🌐 Mini WebApp 🌐', style=enums.ButtonStyle.SUCCESS, web_app=WebAppInfo(url=URL + 'webapp'))
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
