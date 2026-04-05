@@ -5,14 +5,10 @@ from info import BIN_CHANNEL, MAX_BTN
 from utils import temp, get_size
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
-from web.utils.render_template import media_watch, home_tmplt, error_tmplt, webapp_template
+from web.utils.render_template import media_watch, error_tmplt, webapp_template
 from database.ia_filterdb import get_search_results
 
 routes = web.RouteTableDef()
-
-@routes.get("/", allow_head=True)
-async def root_route_handler(request):
-    return web.Response(text=home_tmplt, content_type='text/html')
 
 
 @routes.get("/watch/{message_id}")
@@ -31,7 +27,7 @@ async def download_handler(request):
     except:
         return web.Response(text=error_tmplt, content_type='text/html')
         
-@routes.get("/webapp", allow_head=True)
+@routes.get("/", allow_head=True)
 async def webapp_route_handler(request):
     return web.Response(text=webapp_template, content_type='text/html')
 
@@ -59,8 +55,6 @@ async def api_search_handler(request):
         "max_btn": MAX_BTN,
         "bot_username": temp.U_NAME
     })
-
-
 
 async def media_download(request, message_id: int):
     range_header = request.headers.get('Range', 0)

@@ -4,6 +4,7 @@ from web.utils.custom_dl import TGCustomYield
 import urllib.parse
 import aiofiles, html
 
+
 webapp_template = """
 <!DOCTYPE html>
 <html lang="en">
@@ -14,13 +15,15 @@ webapp_template = """
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            --bg-dark: #0f172a;
-            --bg-light: #1e293b;
-            --accent: var(--tg-theme-button-color, #3b82f6);
-            --text-main: var(--tg-theme-text-color, #f8fafc);
-            --text-muted: var(--tg-theme-hint-color, #94a3b8);
-            --glass-bg: rgba(30, 41, 59, 0.7);
-            --glass-border: rgba(255, 255, 255, 0.08);
+            /* Netflix Color Palette */
+            --bg-main: #141414;
+            --accent: #E50914;
+            --accent-hover: #C11119;
+            --text-main: #FFFFFF;
+            --text-muted: #B3B3B3;
+            --input-bg: #333333;
+            --card-bg: #222222;
+            --card-hover: #2F2F2F;
         }
 
         * {
@@ -30,13 +33,13 @@ webapp_template = """
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, var(--bg-dark) 0%, #164e63 100%);
-            background-attachment: fixed;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            background-color: var(--bg-main);
             color: var(--text-main);
             min-height: 100vh;
-            padding: 20px 16px;
+            padding: 24px 16px;
             padding-bottom: 90px; /* Space for pagination */
+            -webkit-font-smoothing: antialiased;
         }
 
         /* Header & Greeting */
@@ -47,111 +50,128 @@ webapp_template = """
         }
 
         .greeting {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 700;
-            margin-bottom: 4px;
+            margin-bottom: 6px;
             letter-spacing: -0.5px;
         }
 
         .greeting-name {
             color: var(--accent);
-            background: -webkit-linear-gradient(45deg, var(--accent), #60a5fa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
 
         .subtitle {
-            font-size: 14px;
+            font-size: 15px;
             color: var(--text-muted);
+            font-weight: 400;
         }
 
         /* Search Bar Setup */
         .search-container {
             display: flex;
-            gap: 12px;
+            gap: 10px;
             position: sticky;
             top: 10px;
             z-index: 10;
-            margin-bottom: 24px;
-            background: var(--glass-bg);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            padding: 10px;
-            border-radius: 16px;
-            border: 1px solid var(--glass-border);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            margin-bottom: 30px;
+            background: var(--bg-main);
+            padding: 10px 0;
             animation: fadeInUp 0.5s ease 0.1s both;
         }
 
-        input[type="text"] {
+        .input-wrapper {
+            position: relative;
             flex-grow: 1;
-            padding: 14px 18px;
-            border-radius: 12px;
+            display: flex;
+            align-items: center;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px 45px 16px 20px; /* Extra right padding for the clear icon */
+            border-radius: 4px;
             border: 1px solid transparent;
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--input-bg);
             color: var(--text-main);
             font-size: 16px;
             outline: none;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
         }
 
         input[type="text"]:focus {
-            border-color: var(--accent);
-            background: rgba(0, 0, 0, 0.3);
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+            background: #404040;
+            border-color: #555;
         }
 
         input[type="text"]::placeholder {
-            color: var(--text-muted);
+            color: #8C8C8C;
+        }
+
+        .clear-icon {
+            position: absolute;
+            right: 14px;
+            width: 20px;
+            height: 20px;
+            color: #8C8C8C;
+            cursor: pointer;
+            display: none; /* Hidden by default */
+            transition: color 0.2s;
+        }
+
+        .clear-icon:hover {
+            color: #FFFFFF;
         }
 
         .search-btn {
             background: var(--accent);
             color: #ffffff;
             border: none;
-            border-radius: 12px;
-            padding: 0 20px;
+            border-radius: 4px;
+            padding: 0 24px;
             font-weight: 600;
-            font-size: 15px;
+            font-size: 16px;
             cursor: pointer;
-            transition: transform 0.1s, background 0.3s;
+            transition: background 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
         }
 
+        .search-btn:hover {
+            background: var(--accent-hover);
+        }
+
         .search-btn:active {
-            transform: scale(0.95);
+            transform: scale(0.98);
         }
 
         /* Results List */
         .results-container {
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 8px;
         }
 
         .file-card {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: var(--glass-bg);
-            border: 1px solid var(--glass-border);
-            border-radius: 14px;
-            padding: 16px;
+            background: var(--card-bg);
+            border-radius: 4px;
+            padding: 16px 20px;
             cursor: pointer;
             transition: all 0.2s ease;
             animation: fadeInUp 0.4s ease;
-            backdrop-filter: blur(8px);
+            border-left: 4px solid transparent;
         }
 
         .file-card:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
+            background: var(--card-hover);
+            border-left: 4px solid var(--accent);
         }
 
         .file-card:active {
-            transform: scale(0.98);
+            background: #404040;
         }
 
         .file-info {
@@ -163,44 +183,41 @@ webapp_template = """
 
         .file-name {
             font-weight: 500;
-            font-size: 15px;
+            font-size: 16px;
             line-height: 1.4;
             display: -webkit-box;
             -webkit-line-clamp: 2;
             -webkit-box-orient: vertical;
             overflow: hidden;
-            margin-bottom: 8px;
-            color: #e2e8f0;
+            margin-bottom: 6px;
+            color: var(--text-main);
         }
 
         .file-size {
-            font-size: 12px;
-            font-weight: 600;
-            color: #cbd5e1;
-            background: rgba(255, 255, 255, 0.1);
-            padding: 4px 8px;
-            border-radius: 6px;
-            display: inline-block;
-            width: max-content;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
         .get-icon {
             display: flex;
             align-items: center;
             justify-content: center;
-            width: 36px;
-            height: 36px;
-            background: rgba(59, 130, 246, 0.15);
-            color: var(--accent);
+            width: 40px;
+            height: 40px;
+            background: transparent;
+            border: 2px solid var(--text-muted);
+            color: var(--text-muted);
             border-radius: 50%;
             font-size: 18px;
             flex-shrink: 0;
-            transition: background 0.3s;
+            transition: all 0.2s;
         }
         
         .file-card:hover .get-icon {
-            background: var(--accent);
-            color: white;
+            border-color: var(--text-main);
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.1);
         }
 
         /* Pagination Setup */
@@ -214,31 +231,28 @@ webapp_template = """
             display: none;
             justify-content: space-between;
             align-items: center;
-            background: var(--glass-bg);
-            backdrop-filter: blur(16px);
-            -webkit-backdrop-filter: blur(16px);
-            border: 1px solid var(--glass-border);
-            padding: 12px;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            background: rgba(20, 20, 20, 0.95);
+            padding: 12px 16px;
+            border-radius: 8px;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.8);
             z-index: 20;
         }
 
         .page-btn {
-            background: rgba(255, 255, 255, 0.05);
+            background: var(--card-bg);
             color: var(--text-main);
-            border: 1px solid var(--glass-border);
-            padding: 10px 18px;
-            border-radius: 12px;
-            font-weight: 600;
+            border: 1px solid #404040;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-weight: 500;
             font-size: 14px;
             cursor: pointer;
             transition: all 0.2s;
         }
 
         .page-btn:hover:not(:disabled) {
-            background: rgba(255, 255, 255, 0.1);
-            border-color: rgba(255, 255, 255, 0.2);
+            background: var(--card-hover);
+            border-color: var(--text-muted);
         }
 
         .page-btn:disabled {
@@ -247,19 +261,15 @@ webapp_template = """
         }
 
         .page-indicator {
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--accent);
-            background: rgba(0, 0, 0, 0.2);
-            padding: 8px 16px;
-            border-radius: 10px;
-            border: 1px solid rgba(0,0,0,0.1);
+            font-weight: 500;
+            font-size: 15px;
+            color: var(--text-main);
         }
 
         .loader {
             text-align: center;
             padding: 40px 20px;
-            color: var(--text-muted);
+            color: var(--accent);
             font-weight: 500;
             display: none;
             animation: pulse 1.5s infinite;
@@ -284,22 +294,29 @@ webapp_template = """
 <body>
 
     <div class="header">
-        <h1 class="greeting">Hello, <span id="userName" class="greeting-name">Loading...</span> 👋</h1>
-        <p class="subtitle">Search the database for movies and series</p>
+        <h1 class="greeting">Welcome, <span id="userName" class="greeting-name">Loading...</span></h1>
+        <p class="subtitle">Find your favorite movies and series.</p>
     </div>
 
     <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Type a movie or series name..." onkeypress="handleEnter(event)">
+        <div class="input-wrapper">
+            <input type="text" id="searchInput" placeholder="Titles, people, genres" onkeypress="handleEnter(event)" oninput="toggleClearIcon()">
+            
+            <svg id="clearIcon" class="clear-icon" onclick="clearSearch()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+        </div>
         <button class="search-btn" onclick="performSearch()">Search</button>
     </div>
 
-    <div id="loader" class="loader">Searching the database...</div>
+    <div id="loader" class="loader">Searching...</div>
     <div id="results" class="results-container"></div>
 
     <div id="pagination" class="pagination">
-        <button id="backBtn" class="page-btn" onclick="changePage('back')">« Back</button>
+        <button id="backBtn" class="page-btn" onclick="changePage('back')">Back</button>
         <div id="pageIndicator" class="page-indicator">1/1</div>
-        <button id="nextBtn" class="page-btn" onclick="changePage('next')">Next »</button>
+        <button id="nextBtn" class="page-btn" onclick="changePage('next')">Next</button>
     </div>
 
     <script>
@@ -307,15 +324,17 @@ webapp_template = """
         const tg = window.Telegram.WebApp;
         tg.expand();
         
+        // Force background color for Telegram Theme integration
+        tg.setBackgroundColor('#141414');
+        tg.setHeaderColor('#141414');
+
         // Setup Greeting Logic
         const user = tg.initDataUnsafe?.user;
         const userNameElement = document.getElementById('userName');
         
         if (user && user.first_name) {
-            // User accessed via Telegram
             userNameElement.innerText = user.first_name;
         } else {
-            // User accessed via direct browser link
             userNameElement.innerText = "Guest";
         }
 
@@ -330,6 +349,29 @@ webapp_template = """
             if (e.key === 'Enter') performSearch();
         }
 
+        // Logic to show/hide the clear icon based on input content
+        function toggleClearIcon() {
+            const input = document.getElementById('searchInput');
+            const clearIcon = document.getElementById('clearIcon');
+            if (input.value.length > 0) {
+                clearIcon.style.display = 'block';
+            } else {
+                clearIcon.style.display = 'none';
+            }
+        }
+
+        // Logic to completely clear the search and reset the view
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            toggleClearIcon(); // Hide the icon
+            input.focus(); // Bring cursor back to input
+            
+            // Clear current results and pagination
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('pagination').style.display = 'none';
+        }
+
         async function performSearch(offset = 0) {
             const query = document.getElementById('searchInput').value.trim();
             if (!query) return;
@@ -342,7 +384,6 @@ webapp_template = """
             document.getElementById('pagination').style.display = 'none';
 
             try {
-                // Fetch from the backend API
                 const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}`);
                 const data = await response.json();
                 botUsername = data.bot_username;
@@ -362,8 +403,10 @@ webapp_template = """
             
             if (!data.files || data.files.length === 0) {
                 resultsDiv.innerHTML = `
-                    <div style="text-align:center; padding:40px 20px; color:var(--text-muted); background: var(--glass-bg); border-radius: 14px; border: 1px dashed var(--glass-border);">
-                        No results found for "${currentQuery}".<br>Try checking your spelling.
+                    <div style="text-align:center; padding:60px 20px; color:var(--text-muted);">
+                        <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
+                        <h3 style="color: white; margin-bottom: 8px;">No matching results</h3>
+                        <p>Explore more by checking your spelling or trying a different search term.</p>
                     </div>`;
                 return;
             }
@@ -371,22 +414,21 @@ webapp_template = """
             data.files.forEach((file, index) => {
                 const card = document.createElement('div');
                 card.className = 'file-card';
-                // Add staggered animation delay
                 card.style.animationDelay = `${index * 0.05}s`;
                 
+                // Using a play triangle icon (▶) to mimic streaming UI
                 card.innerHTML = `
                     <div class="file-info">
                         <span class="file-name">${file.name}</span>
-                        <span class="file-size">${file.size}</span>
+                        <span class="file-size">${file.size} HD</span>
                     </div>
-                    <div class="get-icon">➔</div>
+                    <div class="get-icon">▶</div>
                 `;
 
                 card.onclick = () => {
                     const payload = `file_${userId}_${file.id}`;
                     const link = `https://t.me/${botUsername}?start=${payload}`;
                     
-                    // Direct browser handling fallback
                     if (userId === 'unknown') {
                         window.open(link, '_blank');
                     } else {
@@ -412,7 +454,7 @@ webapp_template = """
             const totalPages = Math.ceil(data.total_results / data.max_btn);
             const currentPage = Math.ceil(data.current_offset / data.max_btn) + 1;
 
-            document.getElementById('pageIndicator').innerText = `${currentPage} / ${totalPages}`;
+            document.getElementById('pageIndicator').innerText = `Page ${currentPage} of ${totalPages}`;
 
             const backBtn = document.getElementById('backBtn');
             if (data.current_offset > 0) {
@@ -794,184 +836,6 @@ document.addEventListener('DOMContentLoaded', () => {
     videoEl.addEventListener('playing', () => clearTimeout(loadTimeout));
 });
 </script>
-</body>
-</html>
-"""
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# HOME PAGE TEMPLATE  (route: /)
-# ─────────────────────────────────────────────────────────────────────────────
-home_tmplt = """<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>HA Bots</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
-    <style>
-        :root {
-            --p:#818cf8; --p2:#6366f1; --sec:#a78bfa; --acc:#38bdf8;
-            --txt:#f1f5f9; --txt2:#94a3b8;
-            --bg:#020617; --glass:rgba(10,18,38,.8); --gb:rgba(129,140,248,.13);
-        }
-        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-        body {
-            font-family:'Inter',sans-serif;
-            background:var(--bg);
-            color:var(--txt);
-            min-height:100vh;
-            display:flex; flex-direction:column;
-            overflow-x:hidden;
-        }
-        body::before {
-            content:''; position:fixed; inset:0; z-index:-1;
-            background:
-                radial-gradient(ellipse 75% 50% at 10% 20%, rgba(99,102,241,.12) 0%, transparent 58%),
-                radial-gradient(ellipse 60% 40% at 90% 80%, rgba(167,139,250,.09) 0%, transparent 55%),
-                linear-gradient(160deg, #020617 0%, #070c1b 45%, #0f172a 100%);
-            animation:bgP 14s ease-in-out infinite alternate;
-        }
-        @keyframes bgP {
-            0%   { opacity:.75; transform:scale(1); }
-            100% { opacity:1;   transform:scale(1.04); }
-        }
-
-        /* Header */
-        header {
-            padding:.8rem 1.5rem;
-            backdrop-filter:blur(24px) saturate(180%);
-            -webkit-backdrop-filter:blur(24px) saturate(180%);
-            background:var(--glass);
-            border-bottom:1px solid var(--gb);
-            box-shadow:0 1px 32px rgba(0,0,0,.45);
-            display:flex; justify-content:center; align-items:center;
-            animation:fadeDown .45s ease both;
-        }
-        @keyframes fadeDown {
-            from { opacity:0; transform:translateY(-12px); }
-            to   { opacity:1; transform:translateY(0); }
-        }
-        .header-logo {
-            font-size:1rem; font-weight:800; letter-spacing:-.01em;
-            background:linear-gradient(90deg,#e2e8f0 0%,var(--p) 50%,var(--acc) 100%);
-            -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
-        }
-
-        /* Card Layout */
-        main {
-            flex:1; display:flex; align-items:center; justify-content:center;
-            padding:3rem 1.25rem;
-        }
-        .home-card {
-            background:var(--glass);
-            border:1px solid rgba(129,140,248,.22);
-            border-radius:20px;
-            padding:2.5rem 2rem;
-            text-align:center;
-            max-width:440px; width:100%;
-            box-shadow:
-                0 0 0 1px rgba(255,255,255,.04),
-                0 12px 48px rgba(0,0,0,.5),
-                0 0 45px rgba(129,140,248,.09);
-            backdrop-filter:blur(20px);
-            animation:cardIn .5s ease both;
-        }
-        @keyframes cardIn {
-            from { opacity:0; transform:translateY(22px) scale(.97); }
-            to   { opacity:1; transform:translateY(0) scale(1); }
-        }
-
-        /* Bot Icon */
-        .card-icon {
-            width:66px; height:66px; border-radius:50%;
-            margin:0 auto 1.4rem;
-            background:rgba(129,140,248,.15);
-            border:1px solid rgba(129,140,248,.28);
-            display:flex; align-items:center; justify-content:center;
-            box-shadow:0 0 28px rgba(129,140,248,.18);
-        }
-        .card-icon svg { color:var(--p); }
-
-        .home-card h2 {
-            font-size:1.6rem; font-weight:800; letter-spacing:-.02em;
-            margin-bottom:.65rem;
-        }
-        .home-card p {
-            font-size:.88rem; color:var(--txt2); line-height:1.7;
-            margin-bottom:1.75rem; opacity:0.9;
-        }
-
-        /* Buttons */
-        .btn-stack { display:flex; flex-direction:column; gap:.75rem; width:100%; align-items:center; }
-        .hbtn {
-            display:flex; align-items:center; justify-content:center; gap:.5rem;
-            width:100%; max-width:280px;
-            padding:.85rem 1.5rem; border-radius:12px; border:none;
-            font-family:'Inter',sans-serif; font-size:.9rem; font-weight:700;
-            cursor:pointer; text-decoration:none; color:#fff;
-            transition:transform .2s, box-shadow .2s, filter .2s;
-            background:linear-gradient(135deg,var(--p2),var(--p),var(--sec));
-            box-shadow:0 4px 20px rgba(99,102,241,.45);
-        }
-        .hbtn:hover {
-            transform:scale(1.02);
-            box-shadow:0 6px 24px rgba(99,102,241,.55);
-            filter:brightness(1.08);
-        }
-        .hbtn:active { transform:scale(.98); }
-
-        /* Footer */
-        footer {
-            padding:.85rem 1.5rem; text-align:center;
-            color:var(--txt2); font-size:.73rem;
-        }
-        footer::before {
-            content:''; display:block;
-            width:90px; height:1px;
-            background:linear-gradient(90deg,transparent,rgba(129,140,248,.28),transparent);
-            margin:0 auto .7rem;
-        }
-        .ha-link {
-            color:var(--p); text-decoration:none; font-weight:600;
-            transition:opacity .2s;
-        }
-        .ha-link:hover { opacity:.7; }
-    </style>
-</head>
-<body>
-
-<header>
-    <span class="header-logo">HA Bots</span>
-</header>
-
-<main>
-  <div class="home-card">
-    <div class="card-icon">
-      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line>
-      </svg>
-    </div>
-    <h2>HA Bots</h2>
-    <p>HA Bots is a Sri Lankan non-profit project providing free Telegram bot services for the community 🇱🇰</p>
-    <div class="btn-stack">
-      <a href="https://t.me/HA_Bots" class="hbtn" target="_blank" rel="noopener">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-        HA Bots
-      </a>
-      <a href="https://t.me/HA_Bots_Support" class="hbtn" target="_blank" rel="noopener">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        Support Group
-      </a>
-    </div>
-  </div>
-</main>
-
-<footer>
-  <p>Powered by <a href="https://t.me/HA_Bots" class="ha-link" target="_blank" rel="noopener">HA Bots</a></p>
-</footer>
 </body>
 </html>
 """

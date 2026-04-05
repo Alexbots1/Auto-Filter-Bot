@@ -24,7 +24,7 @@ from aiohttp import web
 from typing import Union, Optional, AsyncGenerator
 
 from web import web_app
-from info import INDEX_CHANNELS, SUPPORT_GROUP, LOG_CHANNEL, API_ID, DATA_DATABASE_URL, API_HASH, BOT_TOKEN, PORT, BIN_CHANNEL, ADMINS, SECOND_FILES_DATABASE_URL, FILES_DATABASE_URL
+from info import URL, INDEX_CHANNELS, SUPPORT_GROUP, LOG_CHANNEL, API_ID, DATA_DATABASE_URL, API_HASH, BOT_TOKEN, PORT, BIN_CHANNEL, ADMINS, SECOND_FILES_DATABASE_URL, FILES_DATABASE_URL
 from utils import temp, get_readable_time, check_premium
 from database.users_chats_db import db
 from pymongo.mongo_client import MongoClient
@@ -107,7 +107,7 @@ class Bot(Client):
         except:
             logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
             exit()
-        logger.info(f"@{me.username} is started now ✓")
+        logger.info(f"@{me.username} is started now ✓\nAnd webapp was started [{URL}]")
 
     async def stop(self, **kwargs):
         await super().stop()
