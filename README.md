@@ -157,6 +157,11 @@ sudo docker logs Auto-Filter-Bot
 * [Contributors](https://github.com/HA-Bots/Auto-Filter-Bot/graphs/contributors) For free helps
 * And to everyone who helped
 
+## Donate
+<a href="https://t.me/xrocket?start=inv_Jacx9ueBKgEFLmT" target="_blank">
+  <img src="https://img.shields.io/badge/Donate%20Crypto-%23FF6F00?style=for-the-badge&logo=bitcoin&logoColor=white" alt="Donate Crypto">
+</a>
+
 ## Note
 * Importing this repo instead of forking is strictly prohibited, Kindly fork and edit as your wish. Must Give Credits for [developer(s)](https://t.me/HA_Bots)
 * If you find any bugs or errors, [report](https://t.me/HA_Bots_Support) it
