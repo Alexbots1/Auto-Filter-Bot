@@ -72,28 +72,30 @@ async def save_file(media):
 
 async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
     query = str(query).strip()
-    if not query:
-        raw_pattern = '.'
-    elif ' ' not in query:
-        raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
-    else:
-        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
     
-    try:
-        regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-    except:
-        regex = query
-
-    if USE_CAPTION_FILTER:
-        filter = {'$or': [{'file_name': regex}, {'caption': regex}]}
+    if not query:
+        filter = {} 
     else:
-        filter = {'file_name': regex}
+        if ' ' not in query:
+            raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
+        else:
+            raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
+        
+        try:
+            regex = re.compile(raw_pattern, flags=re.IGNORECASE)
+        except:
+            regex = query
 
-    cursor = collection.find(filter)
+        if USE_CAPTION_FILTER:
+            filter = {'$or': [{'file_name': regex}, {'caption': regex}]}
+        else:
+            filter = {'file_name': regex}
+
+    cursor = collection.find(filter).sort('_id', -1)
     results = [doc for doc in cursor]
 
     if SECOND_FILES_DATABASE_URL:
-        cursor2 = second_collection.find(filter)
+        cursor2 = second_collection.find(filter).sort('_id', -1)
         results.extend([doc for doc in cursor2])
 
     if lang:
@@ -107,10 +109,13 @@ async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
 
     total_results = len(results)
     files = results[offset:][:max_results]
+    
     next_offset = offset + max_results
     if next_offset >= total_results:
-        next_offset = ''   
+        next_offset = '' 
+          
     return files, next_offset, total_results
+
 
 async def delete_files(query):
     query = query.strip()

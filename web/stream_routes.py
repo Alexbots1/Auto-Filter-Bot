@@ -27,6 +27,7 @@ async def download_handler(request):
     except:
         return web.Response(text=error_tmplt, content_type='text/html')
         
+
 @routes.get("/", allow_head=True)
 async def webapp_route_handler(request):
     return web.Response(text=webapp_template, content_type='text/html')
@@ -55,6 +56,7 @@ async def api_search_handler(request):
         "max_btn": MAX_BTN,
         "bot_username": temp.U_NAME
     })
+
 
 async def media_download(request, message_id: int):
     range_header = request.headers.get('Range', 0)
