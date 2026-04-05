@@ -426,7 +426,7 @@ webapp_template = """
                 `;
 
                 card.onclick = () => {
-                    const payload = `file_${userId}_${file.id}`;
+                    const payload = `file_${file.id}`;
                     const link = `https://t.me/${botUsername}?start=${payload}`;
                     
                     if (userId === 'unknown') {

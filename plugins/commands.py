@@ -189,7 +189,10 @@ async def start(client, message):
         await vp.edit("Tʜᴇ ғɪʟᴇ ʜᴀs ʙᴇᴇɴ ɢᴏɴᴇ ! Cʟɪᴄᴋ ɢɪᴠᴇɴ ʙᴜᴛᴛᴏɴ ᴛᴏ ɢᴇᴛ ɪᴛ ᴀɢᴀɪɴ.", reply_markup=InlineKeyboardMarkup(buttons))
         return
 
-    type_, grp_id, file_id = mc.split("_", 2)
+    parts = mc.split("_", 2)
+    type_ = parts[0]
+    grp_id = parts[1] if len(parts) == 3 else 0
+    file_id = parts[-1]
     files_ = await get_file_details(file_id)
     if not files_:
         return await message.reply('No Such File Exist!')
