@@ -145,7 +145,7 @@ REACTIONS = [reactions for reactions in environ.get('REACTIONS', '🤝 😇 🤗
 
 
 # for Premium 
-IS_PREMIUM = is_enabled('IS_PREMIUM', False)
+IS_PREMIUM = is_enabled('IS_PREMIUM', True)
 OWNER_USERNAME = environ.get("OWNER_USERNAME", "Hansaka_Anuhas")
 
 # Telegram Stars required to purchase Premium plans
@@ -156,7 +156,7 @@ SIX_MONTHS_STARS = int(environ.get("SIX_MONTHS_STARS", "220"))
 ONE_YEAR_STARS = int(environ.get("ONE_YEAR_STARS", "400"))
 
 # for TMDb
-TMDB_API_KEY = environ.get("TMDB_API_KEY", "")  # Get API key from here - https://www.themoviedb.org/settings/api
+TMDB_API_KEY = environ.get("TMDB_API_KEY", "0")  # Get API key from here - https://www.themoviedb.org/settings/api
 if len(TMDB_API_KEY) == 0:
     logger.error('TMDB_API_KEY is missing, exiting now')
     exit()
