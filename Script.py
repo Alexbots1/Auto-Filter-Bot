@@ -120,7 +120,8 @@ Support: @{}"""
 /img_2_link - upload image to uguu.se and get link
 /settings - to change group settings as your wish
 /connect - to connect group settings to PM
-/id - to check group or channel id</b>"""
+/id - to check group or channel id
+/download - Download videos from YouTube, Facebook, TikTok, Instagram, and more platforms.</b>"""
     
     SOURCE_TXT = """<b>ʙᴏᴛ ɢɪᴛʜᴜʙ ʀᴇᴘᴏsɪᴛᴏʀʏ -
 
