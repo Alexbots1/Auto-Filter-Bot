@@ -1,8 +1,7 @@
 from pyrogram import Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultCachedDocument, InlineQuery
-from database.ia_filterdb import get_search_results
-from utils import get_size, temp, get_verify_status, is_subscribed, is_premium
-from info import CACHE_TIME, SUPPORT_LINK, UPDATES_LINK, FILE_CAPTION, IS_VERIFY
+from utils import get_size, temp, get_verify_status, is_subscribed, is_premium, get_search_results, handle_next_back
+from info import CACHE_TIME, SUPPORT_LINK, UPDATES_LINK, FILE_CAPTION, IS_VERIFY, MAX_BTN
 
 cache_time = CACHE_TIME
 
@@ -41,7 +40,9 @@ async def inline_search(bot, query):
     results = []
     string = query.query
     offset = int(query.offset or 0)
-    files, next_offset, total = await get_search_results(string, offset=offset)
+    files = await get_search_results(string)
+    files, next_offset, total = await handle_next_back(files, offset=offset, max_results=MAX_BTN)
+
 
     for file in files:
         reply_markup = get_reply_markup(string)

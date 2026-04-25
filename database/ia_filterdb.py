@@ -6,6 +6,7 @@ from pyrogram.file_id import FileId
 from pymongo import MongoClient, TEXT
 from pymongo.errors import DuplicateKeyError, OperationFailure
 from info import USE_CAPTION_FILTER, FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, DATABASE_NAME, COLLECTION_NAME, MAX_BTN
+from utils import temp
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +54,7 @@ async def save_file(media):
     try:
         collection.insert_one(document)
         logger.info(f'Saved - {file_name}')
+        temp.DB_ALL_FILES.append(document)
         return 'suc'
     except DuplicateKeyError:
         logger.warning(f'Already Saved - {file_name}')
@@ -62,6 +64,7 @@ async def save_file(media):
             try:
                 second_collection.insert_one(document)
                 logger.info(f'Saved to 2nd db - {file_name}')
+                temp.DB_ALL_FILES.append(document)
                 return 'suc'
             except DuplicateKeyError:
                 logger.warning(f'Already Saved in 2nd db - {file_name}')
@@ -70,51 +73,18 @@ async def save_file(media):
             logger.error(f'your FILES_DATABASE_URL is already full, add SECOND_FILES_DATABASE_URL')
             return 'err'
 
-async def get_search_results(query, max_results=MAX_BTN, offset=0, lang=None):
-    query = str(query).strip()
-    
-    if not query:
-        filter = {} 
-    else:
-        if ' ' not in query:
-            raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
-        else:
-            raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
-        
-        try:
-            regex = re.compile(raw_pattern, flags=re.IGNORECASE)
-        except:
-            regex = query
 
-        if USE_CAPTION_FILTER:
-            filter = {'$or': [{'file_name': regex}, {'caption': regex}]}
-        else:
-            filter = {'file_name': regex}
-
-    cursor = collection.find(filter).sort('_id', -1)
-    results = [doc for doc in cursor]
-
+def load_all_files():
+    pipeline = [
+        {"$match": {}} 
+    ]
+    cursor = collection.aggregate(pipeline, allowDiskUse=True)
     if SECOND_FILES_DATABASE_URL:
-        cursor2 = second_collection.find(filter).sort('_id', -1)
-        results.extend([doc for doc in cursor2])
-
-    if lang:
-        lang_files = [file for file in results if lang in file['file_name'].lower()]
-        files = lang_files[offset:][:max_results]
-        total_results = len(lang_files)
-        next_offset = offset + max_results
-        if next_offset >= total_results:
-            next_offset = ''
-        return files, next_offset, total_results
-
-    total_results = len(results)
-    files = results[offset:][:max_results]
+        cursor2 = second_collection.aggregate(pipeline, allowDiskUse=True)
+    else:
+        cursor2 = []
     
-    next_offset = offset + max_results
-    if next_offset >= total_results:
-        next_offset = '' 
-          
-    return files, next_offset, total_results
+    return list(cursor) + list(cursor2)
 
 
 async def delete_files(query):

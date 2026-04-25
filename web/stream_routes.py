@@ -2,11 +2,11 @@ import math
 import secrets
 import mimetypes
 from info import BIN_CHANNEL, MAX_BTN
-from utils import temp, get_size
+from utils import temp, get_size, get_search_results, handle_next_back
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
 from web.utils.render_template import media_watch, error_tmplt, webapp_template
-from database.ia_filterdb import get_search_results
+
 
 routes = web.RouteTableDef()
 
@@ -37,7 +37,8 @@ async def api_search_handler(request):
     query = request.query.get('q', '').strip()
     offset = int(request.query.get('offset', 0))
   
-    files, next_offset, total_results = await get_search_results(query, offset=offset)
+    files = await get_search_results(query)
+    files, next_offset, total_results = await handle_next_back(files, offset=offset, max_results=MAX_BTN)
     
     formatted_files = []
     if files:
@@ -50,7 +51,7 @@ async def api_search_handler(request):
  
     return web.json_response({
         "files": formatted_files,
-        "next_offset": next_offset if next_offset != '' else None,
+        "next_offset": next_offset if next_offset != 0 else None,
         "total_results": total_results,
         "current_offset": offset,
         "max_btn": MAX_BTN,

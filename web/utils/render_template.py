@@ -2,7 +2,7 @@ from info import BIN_CHANNEL, URL
 from utils import temp
 from web.utils.custom_dl import TGCustomYield
 import urllib.parse
-import aiofiles, html
+import html
 
 
 webapp_template = """
