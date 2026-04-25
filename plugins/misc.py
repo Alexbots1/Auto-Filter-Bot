@@ -6,6 +6,7 @@ from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyPara
 from utils import get_size
 from datetime import datetime
 import os
+import yt_dlp, httpx
 
 
 @Client.on_message(filters.command('id'))
@@ -149,3 +150,65 @@ def last_online(from_user):
         time += from_user.last_online_date.strftime("%a, %d %b %Y, %H:%M:%S")
     return time
 
+
+@Client.on_message(filters.command('download'))
+async def download_video(client, message):
+    if len(message.command) > 1:
+        link = message.command[1]
+    else:
+        return await message.reply("Use: /download video-url")
+
+    status_msg = await message.reply("⏳ Downloading video, please wait...")
+
+    user_id = message.from_user.id
+    downloaded_file = None
+    thumbnail_file = None
+
+    try:
+        os.makedirs("yt_dlp_downloads", exist_ok=True)
+
+        ydl_opts = {
+            'outtmpl': f'yt_dlp_downloads/{user_id}_%(title)s.%(ext)s',
+            'format': 'best',
+            'quiet': True,
+        }
+
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(link, download=True)
+            title = info.get('title', 'Video')
+            duration = info.get('duration', 0)
+            thumbnail_url = info.get('thumbnail', None)
+            downloaded_file = ydl.prepare_filename(info)
+
+        if thumbnail_url:
+            thumbnail_file = f"yt_dlp_downloads/{user_id}_thumb.jpg"
+            async with httpx.AsyncClient() as http:
+                response = await http.get(thumbnail_url)
+                with open(thumbnail_file, 'wb') as f:
+                    f.write(response.content)
+
+        await status_msg.edit("📤 Uploading to Telegram...")
+
+        await client.send_video(
+            chat_id=message.chat.id,
+            video=downloaded_file,
+            caption=f"🎬 **{title}**",
+            duration=duration,
+            thumb=thumbnail_file,
+            reply_parameters=ReplyParameters(message_id=message.id),
+        )
+
+        await status_msg.delete()
+
+    except yt_dlp.utils.DownloadError as e:
+        await status_msg.edit(f"Download failed:\n`{str(e)}`")
+
+    except Exception as e:
+        await status_msg.edit(f"Error:\n`{str(e)}`")
+
+    finally:
+        if downloaded_file and os.path.exists(downloaded_file):
+            os.remove(downloaded_file)
+        if thumbnail_file and os.path.exists(thumbnail_file):
+            os.remove(thumbnail_file)
+            

@@ -168,6 +168,7 @@ async def next_page(bot, query):
         await query.answer(f"Hello {query.from_user.first_name},\nSend New Request Again!", show_alert=True)
         return
 
+    offset = int(offset)
     files, n_offset, total = await handle_next_back(files, max_results=MAX_BTN, offset=offset)
 
     temp.GET_ALL_FILES[key] = files
