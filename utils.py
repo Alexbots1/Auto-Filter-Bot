@@ -1,5 +1,5 @@
 from pyrogram.errors import UserNotParticipant, FloodWait
-from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE, TMDB_API_KEY
+from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE, TMDB_API_KEY, USE_CAPTION_FILTER
 import asyncio
 from pyrogram.types import InlineKeyboardButton
 from pyrogram import enums
@@ -20,11 +20,52 @@ class temp(object):
     B_NAME = None
     SETTINGS = {}
     VERIFICATIONS = {}
-    FILES = {}
+    GET_ALL_FILES = {}
     USERS_CANCEL = False
     GROUPS_CANCEL = False
     BOT = None
     PREMIUM = {}
+    DB_ALL_FILES = []
+
+
+async def get_search_results(query):
+    query = str(query).strip()
+
+    if not query:
+        return temp.DB_ALL_FILES
+
+    if ' ' not in query:
+        raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
+    else:
+        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
+
+    try:
+        regex = re.compile(raw_pattern, re.IGNORECASE)
+    except re.error:
+        query_lower = query.lower()
+        return [
+            doc for doc in temp.DB_ALL_FILES
+            if query_lower in str(doc.get('file_name', '')).lower()
+            or (USE_CAPTION_FILTER and query_lower in str(doc.get('caption', '')).lower())
+        ]
+
+    def matches(doc):
+        file_name = str(doc.get('file_name', ''))
+        caption = str(doc.get('caption', ''))
+        if USE_CAPTION_FILTER:
+            return bool(regex.search(file_name)) or bool(regex.search(caption))
+        return bool(regex.search(file_name))
+
+    return [doc for doc in temp.DB_ALL_FILES if matches(doc)]
+
+
+async def handle_next_back(data, offset=0, max_results=0):
+    out_data = data[offset:][:max_results]
+    total_results = len(data)
+    next_offset = offset + max_results
+    if next_offset >= total_results:
+        next_offset = 0
+    return out_data, next_offset, total_results
 
 async def is_subscribed(bot, query):
     btn = []

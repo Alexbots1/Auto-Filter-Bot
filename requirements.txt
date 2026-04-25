@@ -3,7 +3,6 @@ tgcrypto
 pymongo
 shortzy
 aiohttp
-aiofiles
 speedtest-cli
 uvloop
 requests

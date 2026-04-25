@@ -2,7 +2,7 @@ from info import BIN_CHANNEL, URL
 from utils import temp
 from web.utils.custom_dl import TGCustomYield
 import urllib.parse
-import aiofiles, html
+import html
 
 
 webapp_template = """
@@ -15,7 +15,6 @@ webapp_template = """
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         :root {
-            /* Netflix Color Palette */
             --bg-main: #141414;
             --accent: #E50914;
             --accent-hover: #C11119;
@@ -38,11 +37,10 @@ webapp_template = """
             color: var(--text-main);
             min-height: 100vh;
             padding: 24px 16px;
-            padding-bottom: 90px; /* Space for pagination */
+            padding-bottom: 90px;
             -webkit-font-smoothing: antialiased;
         }
 
-        /* Header & Greeting */
         .header {
             margin-bottom: 24px;
             text-align: left;
@@ -56,24 +54,16 @@ webapp_template = """
             letter-spacing: -0.5px;
         }
 
-        .greeting-name {
-            color: var(--accent);
-        }
+        .greeting-name { color: var(--accent); }
+        .subtitle { font-size: 15px; color: var(--text-muted); font-weight: 400; }
 
-        .subtitle {
-            font-size: 15px;
-            color: var(--text-muted);
-            font-weight: 400;
-        }
-
-        /* Search Bar Setup */
         .search-container {
             display: flex;
             gap: 10px;
             position: sticky;
             top: 10px;
             z-index: 10;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             background: var(--bg-main);
             padding: 10px 0;
             animation: fadeInUp 0.5s ease 0.1s both;
@@ -88,7 +78,7 @@ webapp_template = """
 
         input[type="text"] {
             width: 100%;
-            padding: 16px 45px 16px 20px; /* Extra right padding for the clear icon */
+            padding: 16px 45px 16px 20px;
             border-radius: 4px;
             border: 1px solid transparent;
             background: var(--input-bg);
@@ -98,14 +88,8 @@ webapp_template = """
             transition: all 0.2s ease;
         }
 
-        input[type="text"]:focus {
-            background: #404040;
-            border-color: #555;
-        }
-
-        input[type="text"]::placeholder {
-            color: #8C8C8C;
-        }
+        input[type="text"]:focus { background: #404040; border-color: #555; }
+        input[type="text"]::placeholder { color: #8C8C8C; }
 
         .clear-icon {
             position: absolute;
@@ -114,13 +98,11 @@ webapp_template = """
             height: 20px;
             color: #8C8C8C;
             cursor: pointer;
-            display: none; /* Hidden by default */
+            display: none;
             transition: color 0.2s;
         }
 
-        .clear-icon:hover {
-            color: #FFFFFF;
-        }
+        .clear-icon:hover { color: #FFFFFF; }
 
         .search-btn {
             background: var(--accent);
@@ -137,15 +119,17 @@ webapp_template = """
             justify-content: center;
         }
 
-        .search-btn:hover {
-            background: var(--accent-hover);
+        .search-btn:hover { background: var(--accent-hover); }
+        .search-btn:active { transform: scale(0.98); }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--text-main);
+            animation: fadeInDown 0.4s ease;
         }
 
-        .search-btn:active {
-            transform: scale(0.98);
-        }
-
-        /* Results List */
         .results-container {
             display: flex;
             flex-direction: column;
@@ -170,9 +154,7 @@ webapp_template = """
             border-left: 4px solid var(--accent);
         }
 
-        .file-card:active {
-            background: #404040;
-        }
+        .file-card:active { background: #404040; }
 
         .file-info {
             display: flex;
@@ -193,11 +175,7 @@ webapp_template = """
             color: var(--text-main);
         }
 
-        .file-size {
-            font-size: 13px;
-            font-weight: 500;
-            color: var(--text-muted);
-        }
+        .file-size { font-size: 13px; font-weight: 500; color: var(--text-muted); }
 
         .get-icon {
             display: flex;
@@ -220,7 +198,6 @@ webapp_template = """
             background: rgba(255, 255, 255, 0.1);
         }
 
-        /* Pagination Setup */
         .pagination {
             position: fixed;
             bottom: 20px;
@@ -255,16 +232,8 @@ webapp_template = """
             border-color: var(--text-muted);
         }
 
-        .page-btn:disabled {
-            opacity: 0.3;
-            cursor: not-allowed;
-        }
-
-        .page-indicator {
-            font-weight: 500;
-            font-size: 15px;
-            color: var(--text-main);
-        }
+        .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .page-indicator { font-weight: 500; font-size: 15px; color: var(--text-main); }
 
         .loader {
             text-align: center;
@@ -275,7 +244,6 @@ webapp_template = """
             animation: pulse 1.5s infinite;
         }
 
-        /* Animations */
         @keyframes fadeInUp {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
@@ -301,16 +269,16 @@ webapp_template = """
     <div class="search-container">
         <div class="input-wrapper">
             <input type="text" id="searchInput" placeholder="Titles, people, genres" onkeypress="handleEnter(event)" oninput="toggleClearIcon()">
-            
             <svg id="clearIcon" class="clear-icon" onclick="clearSearch()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <line x1="18" y1="6" x2="6" y2="18"></line>
                 <line x1="6" y1="6" x2="18" y2="18"></line>
             </svg>
         </div>
-        <button class="search-btn" onclick="performSearch()">Search</button>
+        <button class="search-btn" onclick="performSearch(0)">Search</button>
     </div>
 
-    <div id="loader" class="loader">Searching...</div>
+    <h2 id="sectionTitle" class="section-title">Recently Added</h2>
+    <div id="loader" class="loader">Loading files...</div>
     <div id="results" class="results-container"></div>
 
     <div id="pagination" class="pagination">
@@ -320,15 +288,11 @@ webapp_template = """
     </div>
 
     <script>
-        // Initialize Telegram WebApp
         const tg = window.Telegram.WebApp;
         tg.expand();
-        
-        // Force background color for Telegram Theme integration
         tg.setBackgroundColor('#141414');
         tg.setHeaderColor('#141414');
 
-        // Setup Greeting Logic
         const user = tg.initDataUnsafe?.user;
         const userNameElement = document.getElementById('userName');
         
@@ -344,12 +308,12 @@ webapp_template = """
         let currentOffset = 0;
         let nextOffset = null;
         let botUsername = '';
+        let maxResultsPerPage = 10; // Default, will update from API
 
         function handleEnter(e) {
-            if (e.key === 'Enter') performSearch();
+            if (e.key === 'Enter') performSearch(0);
         }
 
-        // Logic to show/hide the clear icon based on input content
         function toggleClearIcon() {
             const input = document.getElementById('searchInput');
             const clearIcon = document.getElementById('clearIcon');
@@ -357,24 +321,27 @@ webapp_template = """
                 clearIcon.style.display = 'block';
             } else {
                 clearIcon.style.display = 'none';
+                performSearch(0); 
             }
         }
 
-        // Logic to completely clear the search and reset the view
         function clearSearch() {
             const input = document.getElementById('searchInput');
             input.value = '';
-            toggleClearIcon(); // Hide the icon
-            input.focus(); // Bring cursor back to input
-            
-            // Clear current results and pagination
-            document.getElementById('results').innerHTML = '';
-            document.getElementById('pagination').style.display = 'none';
+            toggleClearIcon(); 
+            input.focus();
+            performSearch(0);
         }
 
         async function performSearch(offset = 0) {
             const query = document.getElementById('searchInput').value.trim();
-            if (!query) return;
+            const sectionTitle = document.getElementById('sectionTitle');
+            
+            if (query.length > 0) {
+                sectionTitle.innerText = "Search Results";
+            } else {
+                sectionTitle.innerText = "Recently Added";
+            }
 
             currentQuery = query;
             currentOffset = offset;
@@ -386,7 +353,9 @@ webapp_template = """
             try {
                 const response = await fetch(`/api/search?q=${encodeURIComponent(query)}&offset=${offset}`);
                 const data = await response.json();
+                
                 botUsername = data.bot_username;
+                maxResultsPerPage = data.max_btn; 
                 
                 document.getElementById('loader').style.display = 'none';
                 renderResults(data);
@@ -416,7 +385,6 @@ webapp_template = """
                 card.className = 'file-card';
                 card.style.animationDelay = `${index * 0.05}s`;
                 
-                // Using a play triangle icon (▶) to mimic streaming UI
                 card.innerHTML = `
                     <div class="file-info">
                         <span class="file-name">${file.name}</span>
@@ -426,13 +394,14 @@ webapp_template = """
                 `;
 
                 card.onclick = () => {
-                    const payload = `file_${userId}_${file.id}`;
+                    const payload = `file_${file.id}`;
                     const link = `https://t.me/${botUsername}?start=${payload}`;
                     
                     if (userId === 'unknown') {
                         window.open(link, '_blank');
                     } else {
                         tg.openTelegramLink(link);
+                        setTimeout(() => { tg.close(); }, 100);
                     }
                 };
 
@@ -477,12 +446,16 @@ webapp_template = """
             if (direction === 'next' && nextOffset !== null) {
                 performSearch(nextOffset);
             } else if (direction === 'back') {
-                const maxBtn = 10; 
-                let prevOffset = currentOffset - maxBtn;
+                let prevOffset = currentOffset - maxResultsPerPage;
                 if (prevOffset < 0) prevOffset = 0;
                 performSearch(prevOffset);
             }
         }
+
+        // Trigger initial search on load
+        window.onload = () => {
+            performSearch(0);
+        };
     </script>
 </body>
 </html>

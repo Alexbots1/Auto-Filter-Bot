@@ -59,6 +59,9 @@ async def start(client, message):
             InlineKeyboardButton('🤑 Buy Premium', url=f"https://t.me/{temp.U_NAME}?start=premium")
         ],[
             InlineKeyboardButton('🌐 Mini WebApp 🌐', style=enums.ButtonStyle.SUCCESS, web_app=WebAppInfo(url=URL))
+        ],[
+            InlineKeyboardButton('🎬 Popular Movie 🎬', url="https://www.themoviedb.org/movie"),
+            InlineKeyboardButton('📺 Popular TV Shows 📺', url="https://www.themoviedb.org/tv")
         ]]
         reply_markup = InlineKeyboardMarkup(buttons)
         await message.reply_photo(
@@ -139,7 +142,7 @@ async def start(client, message):
         
     if mc.startswith('all'):
         _, grp_id, key = mc.split("_", 2)
-        files = temp.FILES.get(key)
+        files = temp.GET_ALL_FILES.get(key)
         if not files:
             return await message.reply('No Such All Files Exist!')
         settings = await get_settings(int(grp_id))
@@ -177,6 +180,7 @@ async def start(client, message):
                 reply_markup=InlineKeyboardMarkup(btn)
             )
             file_ids.append(msg.id)
+            await asyncio.sleep(2)
 
         time = get_readable_time(PM_FILE_DELETE_TIME)
         vp = await message.reply(f"Nᴏᴛᴇ: Tʜɪs ғɪʟᴇs ᴡɪʟʟ ʙᴇ ᴅᴇʟᴇᴛᴇ ɪɴ {time} ᴛᴏ ᴀᴠᴏɪᴅ ᴄᴏᴘʏʀɪɢʜᴛs. Sᴀᴠᴇ ᴛʜᴇ ғɪʟᴇs ᴛᴏ sᴏᴍᴇᴡʜᴇʀᴇ ᴇʟsᴇ")
@@ -189,7 +193,10 @@ async def start(client, message):
         await vp.edit("Tʜᴇ ғɪʟᴇ ʜᴀs ʙᴇᴇɴ ɢᴏɴᴇ ! Cʟɪᴄᴋ ɢɪᴠᴇɴ ʙᴜᴛᴛᴏɴ ᴛᴏ ɢᴇᴛ ɪᴛ ᴀɢᴀɪɴ.", reply_markup=InlineKeyboardMarkup(buttons))
         return
 
-    type_, grp_id, file_id = mc.split("_", 2)
+    parts = mc.split("_", 2)
+    type_ = parts[0]
+    grp_id = parts[1] if len(parts) == 3 else 0
+    file_id = parts[-1]
     files_ = await get_file_details(file_id)
     if not files_:
         return await message.reply('No Such File Exist!')

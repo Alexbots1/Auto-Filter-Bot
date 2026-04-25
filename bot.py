@@ -4,7 +4,8 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[logging.StreamHandler()]
 )
-logging.getLogger('pyrogram').setLevel(logging.ERROR)
+logging.getLogger('pyrogram').setLevel(logging.WARNING)
+logging.getLogger('aiohttp').setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 
 import os
@@ -29,6 +30,7 @@ from utils import temp, get_readable_time, check_premium
 from database.users_chats_db import db
 from pymongo.mongo_client import MongoClient
 from pymongo.server_api import ServerApi
+from database.ia_filterdb import load_all_files
 
 if ul:
     uvloop.install()
@@ -76,6 +78,10 @@ class Bot(Client):
             self.listeners.pop(listener_id, None)
 
     async def start(self, **kwargs):
+        logger.info("Fetching all files from the database... (This may take some time)")
+        files = load_all_files()
+        temp.DB_ALL_FILES = files
+        logger.info("Successfully fetched all files")
         await super().start()
         temp.START_TIME = time.time()
         b_users, b_chats = await db.get_banned()
@@ -107,7 +113,7 @@ class Bot(Client):
         except:
             logger.error("Make sure bot admin in LOG_CHANNEL, exiting now")
             exit()
-        logger.info(f"@{me.username} is started now ✓\nAnd webapp was started [{URL}]")
+        logger.info(f"Bot [@{me.username}] and webapp [{URL}] is started now ✓")
 
     async def stop(self, **kwargs):
         await super().stop()
