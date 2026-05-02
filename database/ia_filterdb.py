@@ -59,7 +59,7 @@ async def setup_database():
 
 
 async def second_db_count_documents():
-    if not second_collection:
+    if second_collection is None:
         return 0
     return await second_collection.count_documents({})
 
