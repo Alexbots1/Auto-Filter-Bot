@@ -3,43 +3,71 @@ from struct import pack
 import re
 import base64
 from pyrogram.file_id import FileId
-from pymongo import MongoClient, TEXT
+from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import TEXT
 from pymongo.errors import DuplicateKeyError, OperationFailure
 from info import USE_CAPTION_FILTER, FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, DATABASE_NAME, COLLECTION_NAME, MAX_BTN
-from utils import temp
 
 logger = logging.getLogger(__name__)
 
-client = MongoClient(FILES_DATABASE_URL)
+client = AsyncIOMotorClient(FILES_DATABASE_URL)
 db = client[DATABASE_NAME]
 collection = db[COLLECTION_NAME]
-try:
-    collection.create_index([("file_name", TEXT)])
-except OperationFailure as e:
-    if 'quota' in str(e).lower():
-        if not SECOND_FILES_DATABASE_URL:
-            logger.error(f'your FILES_DATABASE_URL is already full, add SECOND_FILES_DATABASE_URL')
-        else:
-            logger.info('FILES_DATABASE_URL is full, now using SECOND_FILES_DATABASE_URL')
-    else:
-        logger.exception(e)
+
+second_client = None
+second_db = None
+second_collection = None
 
 if SECOND_FILES_DATABASE_URL:
-    second_client = MongoClient(SECOND_FILES_DATABASE_URL)
+    second_client = AsyncIOMotorClient(SECOND_FILES_DATABASE_URL)
     second_db = second_client[DATABASE_NAME]
     second_collection = second_db[COLLECTION_NAME]
-    second_collection.create_index([("file_name", TEXT)])
 
 
-def second_db_count_documents():
-     return second_collection.count_documents({})
+async def setup_database():
+    try:
+        await collection.create_index([("file_name", TEXT), ("caption", TEXT)], name="file_name_caption_text")
+        logger.info("FILES_DATABASE_URL indexes created/verified.")
+    except OperationFailure as e:
+        if e.code == 85:  # IndexOptionsConflict
+            logger.warning("FILES_DATABASE_URL index conflict detected. Dropping old text indexes and recreating...")
+            await collection.drop_indexes() 
+            await collection.create_index([("file_name", TEXT), ("caption", TEXT)], name="file_name_caption_text")
+            logger.info("FILES_DATABASE_URL indexes recreated successfully.")
+        elif 'quota' in str(e).lower():
+            if not SECOND_FILES_DATABASE_URL:
+                logger.error('Your FILES_DATABASE_URL quota is full, add SECOND_FILES_DATABASE_URL. (Bot will still work for searching)')
+            else:
+                logger.info('FILES_DATABASE_URL quota is full, relying on SECOND_FILES_DATABASE_URL')
+        else:
+            logger.exception(e)
+            exit() 
 
-def db_count_documents():
-     return collection.count_documents({})
+    if SECOND_FILES_DATABASE_URL and second_collection is not None:
+        try:
+            await second_collection.create_index([("file_name", TEXT), ("caption", TEXT)], name="file_name_caption_text")
+            logger.info("SECOND_FILES_DATABASE_URL indexes created/verified.")
+        except OperationFailure as e:
+            if e.code == 85:
+                logger.warning("SECOND_FILES_DATABASE_URL index conflict detected. Dropping old text indexes and recreating...")
+                await second_collection.drop_indexes()
+                await second_collection.create_index([("file_name", TEXT), ("caption", TEXT)], name="file_name_caption_text")
+                logger.info("SECOND_FILES_DATABASE_URL indexes recreated successfully.")
+            else:
+                logger.exception(e)
+                exit()
+
+
+async def second_db_count_documents():
+    if not second_collection:
+        return 0
+    return await second_collection.count_documents({})
+
+async def db_count_documents():
+    return await collection.count_documents({})
 
 
 async def save_file(media):
-    """Save file in database"""
     file_id = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.file_name))
     file_caption = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.caption))
@@ -52,39 +80,67 @@ async def save_file(media):
     }
     
     try:
-        collection.insert_one(document)
+        await collection.insert_one(document)
         logger.info(f'Saved - {file_name}')
-        temp.DB_ALL_FILES.append(document)
         return 'suc'
     except DuplicateKeyError:
         logger.warning(f'Already Saved - {file_name}')
         return 'dup'
     except OperationFailure:
-        if SECOND_FILES_DATABASE_URL:
+        if SECOND_FILES_DATABASE_URL and second_collection is not None:
             try:
-                second_collection.insert_one(document)
+                await second_collection.insert_one(document)
                 logger.info(f'Saved to 2nd db - {file_name}')
-                temp.DB_ALL_FILES.append(document)
                 return 'suc'
             except DuplicateKeyError:
                 logger.warning(f'Already Saved in 2nd db - {file_name}')
                 return 'dup'
         else:
-            logger.error(f'your FILES_DATABASE_URL is already full, add SECOND_FILES_DATABASE_URL')
+            logger.error('Your FILES_DATABASE_URL is full, add SECOND_FILES_DATABASE_URL')
             return 'err'
 
 
-def load_all_files():
-    pipeline = [
-        {"$match": {}} 
-    ]
-    cursor = collection.aggregate(pipeline, allowDiskUse=True)
-    if SECOND_FILES_DATABASE_URL:
-        cursor2 = second_collection.aggregate(pipeline, allowDiskUse=True)
+async def get_search_results(query):
+    query = str(query).strip()
+    if not query:
+        recent_limit = 100  # default limit for fetching recently added files
+        results = []
+        
+        cursor1 = collection.find({}).sort("_id", -1).limit(recent_limit)
+        docs1 = await cursor1.to_list(length=recent_limit)
+        results.extend(docs1)
+
+        if SECOND_FILES_DATABASE_URL and second_collection is not None and len(results) < recent_limit:
+            remaining_limit = recent_limit - len(results)
+            cursor2 = second_collection.find({}).sort("_id", -1).limit(remaining_limit)
+            docs2 = await cursor2.to_list(length=remaining_limit)
+            results.extend(docs2)
+
+        return results
+
+    if ' ' not in query:
+        raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
     else:
-        cursor2 = []
+        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
+
+    db_query = {"$regex": raw_pattern, "$options": "i"}
+    search_filter = {"$or": [{"file_name": db_query}]}
     
-    return list(cursor) + list(cursor2)
+    if USE_CAPTION_FILTER:
+        search_filter["$or"].append({"caption": db_query})
+
+    results = []
+    
+    cursor1 = collection.find(search_filter)
+    docs1 = await cursor1.to_list(length=None) 
+    results.extend(docs1)
+
+    if SECOND_FILES_DATABASE_URL and second_collection is not None:
+        cursor2 = second_collection.find(search_filter)
+        docs2 = await cursor2.to_list(length=None)
+        results.extend(docs2)
+
+    return results
 
 
 async def delete_files(query):
@@ -101,25 +157,24 @@ async def delete_files(query):
     except:
         regex = query
         
-    filter = {'file_name': regex}
+    filter_query = {'file_name': regex}
     
-    result1 = collection.delete_many(filter)
-    
-    result2 = None
-    if SECOND_FILES_DATABASE_URL:
-        result2 = second_collection.delete_many(filter)
-    
+    result1 = await collection.delete_many(filter_query)
     total_deleted = result1.deleted_count
-    if result2:
+    
+    if SECOND_FILES_DATABASE_URL and second_collection is not None:
+        result2 = await second_collection.delete_many(filter_query)
         total_deleted += result2.deleted_count
     
     return total_deleted
 
+
 async def get_file_details(query):
-    file_details = collection.find_one({'_id': query})
-    if not file_details and SECOND_FILES_DATABASE_URL:
-        file_details = second_collection.find_one({'_id': query})
+    file_details = await collection.find_one({'_id': query})
+    if not file_details and SECOND_FILES_DATABASE_URL and second_collection is not None:
+        file_details = await second_collection.find_one({'_id': query})
     return file_details
+
 
 def encode_file_id(s: bytes) -> str:
     r = b""
@@ -146,3 +201,4 @@ def unpack_new_file_id(new_file_id):
         )
     )
     return file_id
+

@@ -294,7 +294,7 @@ async def stats(bot, message):
     if user_id not in ADMINS:
         await message.delete()
         return
-    files = db_count_documents()
+    files = await db_count_documents()
     users = await db.total_users_count()
     chats = await db.total_chat_count()
     prm = db.get_premium_count()
@@ -303,7 +303,7 @@ async def stats(bot, message):
 
     if SECOND_FILES_DATABASE_URL:
         secnd_files_db_used_size = get_size(await db.get_second_files_db_size())
-        secnd_files = second_db_count_documents()
+        secnd_files = await second_db_count_documents()
     else:
         secnd_files_db_used_size = '-'
         secnd_files = '-'

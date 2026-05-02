@@ -2,10 +2,11 @@ import math
 import secrets
 import mimetypes
 from info import BIN_CHANNEL, MAX_BTN
-from utils import temp, get_size, get_search_results, handle_next_back
+from utils import temp, get_size, handle_next_back
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
 from web.utils.render_template import media_watch, error_tmplt, webapp_template
+from database.ia_filterdb import get_search_results
 
 
 routes = web.RouteTableDef()

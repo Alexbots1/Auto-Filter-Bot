@@ -25,38 +25,6 @@ class temp(object):
     GROUPS_CANCEL = False
     BOT = None
     PREMIUM = {}
-    DB_ALL_FILES = []
-
-
-async def get_search_results(query):
-    query = str(query).strip()
-
-    if not query:
-        return temp.DB_ALL_FILES
-
-    if ' ' not in query:
-        raw_pattern = r'(\b|[\.\+\-_])' + query + r'(\b|[\.\+\-_])'
-    else:
-        raw_pattern = query.replace(' ', r'.*[\s\.\+\-_]')
-
-    try:
-        regex = re.compile(raw_pattern, re.IGNORECASE)
-    except re.error:
-        query_lower = query.lower()
-        return [
-            doc for doc in temp.DB_ALL_FILES
-            if query_lower in str(doc.get('file_name', '')).lower()
-            or (USE_CAPTION_FILTER and query_lower in str(doc.get('caption', '')).lower())
-        ]
-
-    def matches(doc):
-        file_name = str(doc.get('file_name', ''))
-        caption = str(doc.get('caption', ''))
-        if USE_CAPTION_FILTER:
-            return bool(regex.search(file_name)) or bool(regex.search(caption))
-        return bool(regex.search(file_name))
-
-    return [doc for doc in temp.DB_ALL_FILES if matches(doc)]
 
 
 async def handle_next_back(data, offset=0, max_results=0):

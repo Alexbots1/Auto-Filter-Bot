@@ -28,9 +28,7 @@ from web import web_app
 from info import URL, INDEX_CHANNELS, SUPPORT_GROUP, LOG_CHANNEL, API_ID, DATA_DATABASE_URL, API_HASH, BOT_TOKEN, PORT, BIN_CHANNEL, ADMINS, SECOND_FILES_DATABASE_URL, FILES_DATABASE_URL
 from utils import temp, get_readable_time, check_premium
 from database.users_chats_db import db
-from pymongo.mongo_client import MongoClient
-from pymongo.server_api import ServerApi
-from database.ia_filterdb import load_all_files
+from database.ia_filterdb import setup_database
 
 if ul:
     uvloop.install()
@@ -78,10 +76,9 @@ class Bot(Client):
             self.listeners.pop(listener_id, None)
 
     async def start(self, **kwargs):
-        logger.info("Fetching all files from the database... (This may take some time)")
-        files = load_all_files()
-        temp.DB_ALL_FILES = files
-        logger.info("Successfully fetched all files")
+        logger.info('Setting up your database, please wait a moment...')
+        await setup_database()
+        logger.info('Successfully setup the database!')
         await super().start()
         temp.START_TIME = time.time()
         b_users, b_chats = await db.get_banned()

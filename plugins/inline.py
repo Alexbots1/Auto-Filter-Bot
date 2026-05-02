@@ -1,6 +1,7 @@
 from pyrogram import Client
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InlineQueryResultCachedDocument, InlineQuery
-from utils import get_size, temp, get_verify_status, is_subscribed, is_premium, get_search_results, handle_next_back
+from utils import get_size, temp, get_verify_status, is_subscribed, is_premium, handle_next_back
+from database.ia_filterdb import get_search_results
 from info import CACHE_TIME, SUPPORT_LINK, UPDATES_LINK, FILE_CAPTION, IS_VERIFY, MAX_BTN
 
 cache_time = CACHE_TIME

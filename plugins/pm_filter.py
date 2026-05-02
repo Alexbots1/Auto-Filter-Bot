@@ -9,9 +9,9 @@ from datetime import datetime, timedelta
 from info import VERIFY_TUTORIAL, IS_PREMIUM, PICS, TUTORIAL, SHORTLINK_API, SHORTLINK_URL, OWNER_USERNAME, ONE_WEEK_STARS, ONE_MONTH_STARS, THREE_MONTHS_STARS, SIX_MONTHS_STARS, ONE_YEAR_STARS, SECOND_FILES_DATABASE_URL, ADMINS, URL, MAX_BTN, BIN_CHANNEL, IS_STREAM, DELETE_TIME, FILMS_LINK, LOG_CHANNEL, SUPPORT_GROUP, SUPPORT_LINK, UPDATES_LINK, LANGUAGES, QUALITY
 from pyrogram.types import ReplyParameters, WebAppInfo, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, InputMediaPhoto, LinkPreviewOptions
 from pyrogram import Client, filters, enums
-from utils import get_search_results, handle_next_back, is_premium, get_size, is_subscribed, is_check_admin, get_wish, get_shortlink, get_readable_time, get_poster, temp, get_settings, save_group_settings
+from utils import handle_next_back, is_premium, get_size, is_subscribed, is_check_admin, get_wish, get_shortlink, get_readable_time, get_poster, temp, get_settings, save_group_settings
 from database.users_chats_db import db
-from database.ia_filterdb import delete_files, db_count_documents, second_db_count_documents
+from database.ia_filterdb import delete_files, db_count_documents, second_db_count_documents, get_search_results
 from plugins.commands import get_grp_stg
 
 BUTTONS = {}
@@ -19,6 +19,7 @@ CAP = {}
 SELECT = {}
 FILES= {}
 ALL_FILES={}
+QUERY_CACHE = {}
 
 # payment handle
 @Client.on_pre_checkout_query()
@@ -102,40 +103,10 @@ async def group_search(client, message):
                 await message.reply_text(f'Total {len(files)} results found in this group', reply_markup=InlineKeyboardMarkup(btn))
             return
             
-        if message.text.startswith("/"):
-            return
-            
-        elif '@admin' in message.text.lower() or '@admins' in message.text.lower():
-            if await is_check_admin(client, message.chat.id, message.from_user.id):
-                return
-            admins = []
-            async for member in client.get_chat_members(chat_id=message.chat.id, filter=enums.ChatMembersFilter.ADMINISTRATORS):
-                if not member.user.is_bot:
-                    admins.append(member.user.id)
-                    if member.status == enums.ChatMemberStatus.OWNER:
-                        if message.reply_to_message:
-                            try:
-                                sent_msg = await message.reply_to_message.forward(member.user.id)
-                                await sent_msg.reply_text(f"#Attention\n★ User: {message.from_user.mention}\n★ Group: {message.chat.title}\n\n★ <a href={message.reply_to_message.link}>Go to message</a>", link_preview_options=LinkPreviewOptions(is_disabled=True))
-                            except:
-                                pass
-                        else:
-                            try:
-                                sent_msg = await message.forward(member.user.id)
-                                await sent_msg.reply_text(f"#Attention\n★ User: {message.from_user.mention}\n★ Group: {message.chat.title}\n\n★ <a href={message.link}>Go to message</a>", link_preview_options=LinkPreviewOptions(is_disabled=True))
-                            except:
-                                pass
-            hidden_mentions = (f'[\u2064](tg://user?id={user_id})' for user_id in admins)
-            await message.reply_text('Report sent!' + ''.join(hidden_mentions))
+        if message.text.startswith("/") or re.findall(r'https?://\S+|www\.\S+|t\.me/\S+|@\w+', message.text):
             return
 
-        elif re.findall(r'https?://\S+|www\.\S+|t\.me/\S+|@\w+', message.text):
-            if await is_check_admin(client, message.chat.id, message.from_user.id):
-                return
-            await message.delete()
-            return await message.reply('Links not allowed here!')
-        
-        elif '#request' in message.text.lower():
+        if '#request' in message.text.lower():
             if message.from_user.id in ADMINS:
                 return
             await client.send_message(LOG_CHANNEL, f"#Request\n★ User: {message.from_user.mention}\n★ Group: {message.chat.title}\n\n★ Message: {re.sub(r'#request', '', message.text.lower())}")
@@ -638,7 +609,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
     elif query.data == "stats":
         if query.from_user.id not in ADMINS:
             return await query.answer("ADMINS Only!", show_alert=True)
-        files = db_count_documents()
+        files = await db_count_documents()
         users = await db.total_users_count()
         chats = await db.total_chat_count()
         prm = db.get_premium_count()
@@ -647,7 +618,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
 
         if SECOND_FILES_DATABASE_URL:
             secnd_files_db_used_size = get_size(await db.get_second_files_db_size())
-            secnd_files = second_db_count_documents()
+            secnd_files = await second_db_count_documents()
         else:
             secnd_files_db_used_size = '-'
             secnd_files = '-'
@@ -1093,7 +1064,12 @@ async def auto_filter(client, msg, s, spoll=False):
         message = msg
         settings = await get_settings(message.chat.id)
         search = re.sub(r"\s+", " ", re.sub(r"[-:\"';!]", " ", message.text)).strip()
-        files = await get_search_results(search)
+        cache_key = search.lower()
+        if cache_key in QUERY_CACHE:
+            files = QUERY_CACHE[cache_key]
+        else:
+            files = await get_search_results(search)
+            QUERY_CACHE[cache_key] = files
         if not files:
             if settings["spell_check"]:
                 await advantage_spell_chok(message, s)
@@ -1104,6 +1080,9 @@ async def auto_filter(client, msg, s, spoll=False):
         settings = await get_settings(msg.message.chat.id)
         message = msg.message.reply_to_message  # msg will be callback query
         search, files = spoll
+        cache_key = search.lower()
+        if cache_key not in QUERY_CACHE:
+            QUERY_CACHE[cache_key] = files
     
     key = f"{message.chat.id}-{message.id}"
     FILES[key] = files
@@ -1252,6 +1231,7 @@ async def advantage_spell_chok(message, s):
         return
 
     user = message.from_user.id if message.from_user else 0
+    
     buttons = [[
         InlineKeyboardButton(text=movie.get('title'), callback_data=f"spolling#{movie['id']}#{user}")
     ]
