@@ -243,13 +243,13 @@ async def list_chats(bot, message):
 
 @Client.on_chat_join_request()
 async def join_reqs(client, message: ChatJoinRequest):
-    stg = db.get_bot_sttgs()
+    stg = await db.get_bot_sttgs()
     if message.chat.id == int(stg.get('REQUEST_FORCE_SUB_CHANNELS')):
         if not db.find_join_req(message.from_user.id):
-            db.add_join_req(message.from_user.id)
+            await db.add_join_req(message.from_user.id)
 
 
 @Client.on_message(filters.command("delreq") & filters.private & filters.user(ADMINS))
 async def del_requests(client, message):
-    db.del_join_req()
+    await db.del_join_req()
     await message.reply('Deleted join requests')

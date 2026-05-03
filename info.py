@@ -59,7 +59,13 @@ if len(LOG_CHANNEL) == 0:
     exit()
 else:
     LOG_CHANNEL = int(LOG_CHANNEL)
-    
+UPDATES_SEND_CHANNEL = environ.get('UPDATES_SEND_CHANNEL', '')
+if len(UPDATES_SEND_CHANNEL) == 0:
+    logger.info('UPDATES_SEND_CHANNEL is missing')
+    UPDATES_SEND_CHANNEL = None
+else:
+    UPDATES_SEND_CHANNEL = int(UPDATES_SEND_CHANNEL)
+
 # support group
 SUPPORT_GROUP = environ.get('SUPPORT_GROUP', '')
 if len(SUPPORT_GROUP) == 0:
@@ -140,9 +146,8 @@ else:
         logger.error('URL is not valid, exiting now')
         exit()
 
-#start command reactions
+#start command reactions 
 REACTIONS = [reactions for reactions in environ.get('REACTIONS', '🤝 😇 🤗 😍 👍 🎅 😐 🥰 🤩 😱 🤣 😘 👏 😛 😈 🎉 ⚡️ 🫡 🤓 😎 🏆 🔥 🤭 🌚 🆒 👻 😁').split()]  # Multiple reactions can be used separated by space
-
 
 # for Premium 
 IS_PREMIUM = is_enabled('IS_PREMIUM', False)

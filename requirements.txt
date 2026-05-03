@@ -1,6 +1,5 @@
 kurigram
 tgcrypto
-pymongo
 shortzy
 aiohttp
 speedtest-cli
@@ -10,3 +9,4 @@ pytz
 yt-dlp
 httpx
 motor
+parse-torrent-title

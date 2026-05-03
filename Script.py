@@ -131,3 +131,12 @@ Support: @{}"""
 
 - ᴅᴇᴠʟᴏᴘᴇʀ - @HA_Bots"""
 
+
+    NEW_ADDED_TEMPLATE = """✅ New Added ✅
+
+🏷 Title: <a href={url}>{title}</a>
+🎭 Genres: {genres}
+📆 Year: {year}
+🌟 Rating: {rating} / 10
+☀️ Languages: {languages}
+📀 RunTime: {runtime} Minutes"""

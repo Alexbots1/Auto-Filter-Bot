@@ -297,7 +297,7 @@ async def stats(bot, message):
     files = await db_count_documents()
     users = await db.total_users_count()
     chats = await db.total_chat_count()
-    prm = db.get_premium_count()
+    prm = await db.get_premium_count()
     used_files_db_size = get_size(await db.get_files_db_size())
     used_data_db_size = get_size(await db.get_data_db_size())
 
@@ -353,7 +353,7 @@ async def settings(client, message):
         ]]
         await message.reply_text('Where do you want to open the settings menu?', reply_markup=InlineKeyboardMarkup(btn))
     elif message.chat.type == enums.ChatType.PRIVATE:
-        cons = db.get_connections(message.from_user.id)
+        cons = await db.get_connections(message.from_user.id)
         if not cons:
             return await message.reply_text("No groups found! Use this command group and open in PM")
         buttons = []
@@ -372,7 +372,7 @@ async def settings(client, message):
 async def connect(client, message):
     if message.chat.type in [enums.ChatType.GROUP, enums.ChatType.SUPERGROUP]:
         group_id = message.chat.id
-        db.add_connect(group_id, message.from_user.id)
+        await db.add_connect(group_id, message.from_user.id)
         await message.reply_text('Successfully connected this group to PM, now you can manage your group using /settings inside your PM')
     elif message.chat.type == enums.ChatType.PRIVATE:
         if len(message.command) > 1:
@@ -380,7 +380,7 @@ async def connect(client, message):
             if not await is_check_admin(client, int(group_id), message.from_user.id):
                 return await message.reply_text('You not admin in this group.')
             chat = await client.get_chat(int(group_id))
-            db.add_connect(int(group_id), message.from_user.id)
+            await db.add_connect(int(group_id), message.from_user.id)
             await message.reply_text(f'Successfully connected {chat.title} group to PM')
         else:
             await message.reply_text('Usage: /connect group_id\nor use /connect in group')
@@ -485,7 +485,7 @@ async def add_prm(bot, message):
         mp['expire'] = ex
         mp['plan'] = f'{d} days'
         mp['premium'] = True
-        db.update_plan(user.id, mp)
+        await db.update_plan(user.id, mp)
         await message.reply(f"Given premium to {user.mention}\nExpire: {ex.strftime('%Y.%m.%d %H:%M:%S')}")
         try:
             await bot.send_message(user.id, f"Your now premium user\nExpire: {ex.strftime('%Y.%m.%d %H:%M:%S')}")
@@ -517,7 +517,7 @@ async def rm_prm(bot, message):
         mp['expire'] = ''
         mp['plan'] = ''
         mp['premium'] = False
-        db.update_plan(user.id, mp)
+        await db.update_plan(user.id, mp)
         await message.reply(f"{user.mention} is no longer premium user")
         try:
             await bot.send_message(user.id, "Your premium plan was removed by admin")
@@ -530,7 +530,7 @@ async def prm_list(bot, message):
     if not IS_PREMIUM:
         return await message.reply('Premium feature was disabled')
     tx = await message.reply('Getting list of premium users')
-    pr = [i['id'] for i in db.get_premium_users() if i['status']['premium']]
+    pr = [i['id'] for i in await db.get_premium_users() if i['status']['premium']]
     t = 'premium users saved in database are:\n\n'
     for p in pr:
         try:
@@ -554,7 +554,7 @@ async def set_fsub(bot, message):
             title += f'{chat.title}\n'
         except Exception as e:
             return await message.reply(f'ERROR: {e}')
-    db.update_bot_sttgs('FORCE_SUB_CHANNELS', ids)
+    await db.update_bot_sttgs('FORCE_SUB_CHANNELS', ids)
     await message.reply(f'added force subscribe channels: {title}')
 
         
@@ -569,30 +569,30 @@ async def set_req_fsub(bot, message):
         chat = await bot.get_chat(int(id))
     except Exception as e:
         return await message.reply(f'ERROR: {e}')
-    db.update_bot_sttgs('REQUEST_FORCE_SUB_CHANNELS', id)
+    await db.update_bot_sttgs('REQUEST_FORCE_SUB_CHANNELS', id)
     await message.reply(f'added request force subscribe channel: {chat.title}')
 
 
 @Client.on_message(filters.command('off_auto_filter') & filters.user(ADMINS))
 async def off_auto_filter(bot, message):
-    db.update_bot_sttgs('AUTO_FILTER', False)
+    await db.update_bot_sttgs('AUTO_FILTER', False)
     await message.reply('Successfully turned off auto filter for all groups')
 
 
 @Client.on_message(filters.command('on_auto_filter') & filters.user(ADMINS))
 async def on_auto_filter(bot, message):
-    db.update_bot_sttgs('AUTO_FILTER', True)
+    await db.update_bot_sttgs('AUTO_FILTER', True)
     await message.reply('Successfully turned on auto filter for all groups')
 
 
 
 @Client.on_message(filters.command('off_pm_search') & filters.user(ADMINS))
 async def off_pm_search(bot, message):
-    db.update_bot_sttgs('PM_SEARCH', False)
+    await db.update_bot_sttgs('PM_SEARCH', False)
     await message.reply('Successfully turned off pm search for all users')
 
 
 @Client.on_message(filters.command('on_pm_search') & filters.user(ADMINS))
 async def on_pm_search(bot, message):
-    db.update_bot_sttgs('PM_SEARCH', True)
+    await db.update_bot_sttgs('PM_SEARCH', True)
     await message.reply('Successfully turned on pm search for all users')

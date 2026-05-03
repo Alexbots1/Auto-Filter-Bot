@@ -4,9 +4,12 @@ import re
 import base64
 from pyrogram.file_id import FileId
 from motor.motor_asyncio import AsyncIOMotorClient
-from pymongo import TEXT
+from pymongo import TEXT, ASCENDING
 from pymongo.errors import DuplicateKeyError, OperationFailure
-from info import USE_CAPTION_FILTER, FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, DATABASE_NAME, COLLECTION_NAME, MAX_BTN
+from info import USE_CAPTION_FILTER, FILES_DATABASE_URL, SECOND_FILES_DATABASE_URL, DATABASE_NAME, COLLECTION_NAME, MAX_BTN, DATA_DATABASE_URL
+import PTN, asyncio
+from database.users_chats_db import data_db
+from utils import send_update
 
 logger = logging.getLogger(__name__)
 
@@ -23,8 +26,30 @@ if SECOND_FILES_DATABASE_URL:
     second_db = second_client[DATABASE_NAME]
     second_collection = second_db[COLLECTION_NAME]
 
+updates_collection = data_db['notified_media']
 
 async def setup_database():
+    try:
+        await updates_collection.create_index(
+            [("title", ASCENDING), ("year", ASCENDING)],
+            unique=True,
+            name="title_year_unique"
+        )
+        logger.info("DATA_DATABASE_URL update indexes created/verified.")
+    except OperationFailure as e:
+        if e.code == 85:  # IndexOptionsConflict
+            logger.warning("DATA_DATABASE_URL update index conflict detected. Dropping old indexes and recreating...")
+            await updates_collection.drop_indexes() 
+            await updates_collection.create_index(
+                [("title", ASCENDING), ("year", ASCENDING)],
+                unique=True,
+                name="title_year_unique"
+            )
+            logger.info("DATA_DATABASE_URL update indexes recreated successfully.")
+        else:
+            logger.exception(e)
+            exit()
+
     try:
         await collection.create_index([("file_name", TEXT), ("caption", TEXT)], name="file_name_caption_text")
         logger.info("FILES_DATABASE_URL indexes created/verified.")
@@ -67,6 +92,20 @@ async def db_count_documents():
     return await collection.count_documents({})
 
 
+async def trigger_update_if_new(title, year):
+    if not title:
+        return
+    normalized_title = str(title).strip().lower()
+    try:
+        await updates_collection.insert_one({
+            "title": normalized_title, 
+            "year": year
+        })
+        asyncio.create_task(send_update(title, year))
+    except DuplicateKeyError:
+        pass
+
+
 async def save_file(media):
     file_id = unpack_new_file_id(media.file_id)
     file_name = re.sub(r"@\w+|(_|\-|\.|\+)", " ", str(media.file_name))
@@ -79,19 +118,30 @@ async def save_file(media):
         'caption': file_caption
     }
     
+    data = PTN.parse(file_name)
+    title = data.get('title')
+    year = data.get('year')
+    
     try:
         await collection.insert_one(document)
         logger.info(f'Saved - {file_name}')
+        
+        await trigger_update_if_new(title, year)
         return 'suc'
+        
     except DuplicateKeyError:
         logger.warning(f'Already Saved - {file_name}')
         return 'dup'
+        
     except OperationFailure:
         if SECOND_FILES_DATABASE_URL and second_collection is not None:
             try:
                 await second_collection.insert_one(document)
                 logger.info(f'Saved to 2nd db - {file_name}')
+                
+                await trigger_update_if_new(title, year)
                 return 'suc'
+                
             except DuplicateKeyError:
                 logger.warning(f'Already Saved in 2nd db - {file_name}')
                 return 'dup'

@@ -1,13 +1,14 @@
 from pyrogram.errors import UserNotParticipant, FloodWait
-from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE, TMDB_API_KEY, USE_CAPTION_FILTER
+from info import LONG_IMDB_DESCRIPTION, ADMINS, IS_PREMIUM, TIME_ZONE, TMDB_API_KEY, USE_CAPTION_FILTER, UPDATES_SEND_CHANNEL, FILMS_LINK
 import asyncio
-from pyrogram.types import InlineKeyboardButton
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 from pyrogram import enums
 import re
 from datetime import datetime
 from database.users_chats_db import db
 from shortzy import Shortzy
 import requests, pytz
+from Script import script
 
 
 class temp(object):
@@ -27,6 +28,36 @@ class temp(object):
     PREMIUM = {}
 
 
+async def send_update(title, year):
+    if not UPDATES_SEND_CHANNEL:
+        return
+    data = await get_poster(f"{title} {year}")
+    if not data:
+        return
+    caption = script.NEW_ADDED_TEMPLATE.format(
+        title=data['title'],
+        kind=data['kind'],
+        votes=data['votes'],
+        tmdb_id=data["tmdb_id"],
+        runtime=data["runtime"],
+        release_date=data['release_date'],
+        year=data['year'],
+        genres=data['genres'],
+        plot=data['plot'],
+        rating=data['rating'],
+        url=data['url'],
+        languages=data['languages'],
+        countries=data['countries']
+    )
+    btn = [[
+        InlineKeyboardButton('📥 Request from Here 📥', url=FILMS_LINK)
+    ]]
+    if data.get('poster'):
+        await temp.BOT.send_photo(chat_id=UPDATES_SEND_CHANNEL, photo=data.get('poster'), caption=caption, reply_markup=InlineKeyboardMarkup(btn))
+    else:
+        await temp.BOT.send_message(chat_id=UPDATES_SEND_CHANNEL, text=caption, reply_markup=InlineKeyboardMarkup(btn), link_preview_options=LinkPreviewOptions(is_disabled=True))
+
+
 async def handle_next_back(data, offset=0, max_results=0):
     out_data = data[offset:][:max_results]
     total_results = len(data)
@@ -39,7 +70,7 @@ async def is_subscribed(bot, query):
     btn = []
     if await is_premium(query.from_user.id, bot):
         return btn
-    stg = db.get_bot_sttgs()
+    stg = await db.get_bot_sttgs()
     if not stg or not stg.get('FORCE_SUB_CHANNELS'):
         return btn
     for id in stg.get('FORCE_SUB_CHANNELS').split(' '):
@@ -248,7 +279,7 @@ async def is_premium(user_id, bot):
             mp['expire'] = ''
             mp['plan'] = ''
             mp['premium'] = False
-            db.update_plan(user_id, mp)
+            await db.update_plan(user_id, mp)
             return False
         return True
     else:
@@ -257,7 +288,7 @@ async def is_premium(user_id, bot):
 
 async def check_premium(bot):
     while True:
-        pr = [i for i in db.get_premium_users() if i['status']['premium']]
+        pr = [i for i in await db.get_premium_users() if i['status']['premium']]
         for p in pr:
             mp = p['status']
             if mp['expire'] < datetime.now():
@@ -271,7 +302,7 @@ async def check_premium(bot):
                 mp['expire'] = ''
                 mp['plan'] = ''
                 mp['premium'] = False
-                db.update_plan(p['id'], mp)
+                await db.update_plan(p['id'], mp)
         await asyncio.sleep(1200)
 
 

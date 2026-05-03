@@ -75,6 +75,7 @@
 * `AUTH_CHANNEL`: ID of force subscribe channels (Multiple channels can be used separated by space)
 * `INDEX_CHANNELS`: Username or ID of your files channels (Multiple channels can be used separated by space)
 * `LANGUAGES`: Language of your bot search (Multiple languages can be used separated by space)
+* `UPDATES_SEND_CHANNEL`: Channel ID for send updates if added new movie or tv series to database
 * Check [info.py](https://github.com/HA-Bots/Auto-Filter-Bot/blob/main/info.py) for more optional variables
 
 

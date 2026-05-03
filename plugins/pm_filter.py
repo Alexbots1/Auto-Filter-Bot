@@ -45,7 +45,7 @@ async def payment_successful(client, message: Message):
     mp['expire'] = ex
     mp['plan'] = f'{days} days'
     mp['premium'] = True
-    db.update_plan(user.id, mp)
+    await db.update_plan(user.id, mp)
     await message.reply(f"Congratulations! Your Premium has been activated! 🎉\n⏳ Expires on: {ex.strftime('%Y-%m-%d %H:%M:%S')}")
     await message.reply(f"Transaction ID: <code>{message.successful_payment.telegram_payment_charge_id}</code>")
     await client.send_message(
@@ -63,7 +63,7 @@ async def payment_successful(client, message: Message):
 async def pm_search(client, message):
     if message.text.startswith("/"):
         return
-    stg = db.get_bot_sttgs()
+    stg = await db.get_bot_sttgs()
     if not stg.get('PM_SEARCH'):
         return await message.reply_text('PM search was disabled!')
     if await is_premium(message.from_user.id, client):
@@ -89,7 +89,7 @@ async def pm_search(client, message):
 async def group_search(client, message):
     chat_id = message.chat.id
     user_id = message.from_user.id if message and message.from_user else 0
-    stg = db.get_bot_sttgs()
+    stg = await db.get_bot_sttgs()
     if stg.get('AUTO_FILTER'):
         if not user_id:
             await message.reply("I'm not working for anonymous admin!")
@@ -487,7 +487,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         mp['trial'] = True
         mp['plan'] = '1 hour'
         mp['premium'] = True
-        db.update_plan(query.from_user.id, mp)
+        await db.update_plan(query.from_user.id, mp)
         await query.message.edit(f"Congratulations! Your activated trial for 1 hour\nExpire: {ex.strftime('%Y.%m.%d %H:%M:%S')}")
 
     elif query.data == 'activate_plan':
@@ -612,7 +612,7 @@ async def cb_handler(client: Client, query: CallbackQuery):
         files = await db_count_documents()
         users = await db.total_users_count()
         chats = await db.total_chat_count()
-        prm = db.get_premium_count()
+        prm = await db.get_premium_count()
         used_files_db_size = get_size(await db.get_files_db_size())
         used_data_db_size = get_size(await db.get_data_db_size())
 
@@ -1148,7 +1148,6 @@ async def auto_filter(client, msg, s, spoll=False):
             release_date=imdb['release_date'],
             year=imdb['year'],
             genres=imdb['genres'],
-            poster=imdb['poster'],
             plot=imdb['plot'],
             rating=imdb['rating'],
             url=imdb['url'],
@@ -1164,17 +1163,6 @@ async def auto_filter(client, msg, s, spoll=False):
         await s.delete()
         try:
             k = await message.reply_photo(photo=imdb.get('poster'), caption=cap[:1024] + files_link + del_msg, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML, reply_parameters=ReplyParameters(message_id=message.id))
-            if settings["auto_delete"]:
-                await asyncio.sleep(DELETE_TIME)
-                await k.delete()
-                try:
-                    await message.delete()
-                except:
-                    pass
-        except (MediaEmpty, PhotoInvalidDimensions, WebpageMediaEmpty):
-            pic = imdb.get('poster')
-            poster = pic.replace('.jpg', "._V1_UX360.jpg")
-            k = await message.reply_photo(photo=poster, caption=cap[:1024] + files_link + del_msg, reply_markup=InlineKeyboardMarkup(btn), parse_mode=enums.ParseMode.HTML, reply_parameters=ReplyParameters(message_id=message.id))
             if settings["auto_delete"]:
                 await asyncio.sleep(DELETE_TIME)
                 await k.delete()
