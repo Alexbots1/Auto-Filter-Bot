@@ -33,6 +33,8 @@ async def send_update(title, year):
         return
     data = await get_poster(f"{title} {year}")
     if not data:
+        _year = f"({year})" if year else ""
+        await temp.BOT.send_message(chat_id=UPDATES_SEND_CHANNEL, text=f"✅ New Added ✅\n\n🏷 Title: {title.title()} {_year}", reply_markup=InlineKeyboardMarkup(btn))
         return
     caption = script.NEW_ADDED_TEMPLATE.format(
         title=data['title'],
@@ -119,6 +121,8 @@ def list_to_str(k):
 
 
 async def get_poster(query, bulk=False, id=False, file=None):
+    if not TMDB_API_KEY:
+        return None
     TMDB_BASE = "https://api.themoviedb.org/3"
 
     year = None
