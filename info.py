@@ -150,8 +150,8 @@ else:
 REACTIONS = [reactions for reactions in environ.get('REACTIONS', '🤝 😇 🤗 😍 👍 🎅 😐 🥰 🤩 😱 🤣 😘 👏 😛 😈 🎉 ⚡️ 🫡 🤓 😎 🏆 🔥 🤭 🌚 🆒 👻 😁').split()]  # Multiple reactions can be used separated by space
 
 # for Premium 
-IS_PREMIUM = is_enabled('IS_PREMIUM', False)
-OWNER_USERNAME = environ.get("OWNER_USERNAME", "Hansaka_Anuhas")
+IS_PREMIUM = is_enabled('IS_PREMIUM', True)
+OWNER_USERNAME = environ.get("OWNER_USERNAME", "shahm008")
 
 # Telegram Stars required to purchase Premium plans
 ONE_WEEK_STARS = int(environ.get("ONE_WEEK_STARS", "30"))
