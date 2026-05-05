@@ -10,8 +10,9 @@ from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPrevi
 from database.ia_filterdb import db_count_documents, second_db_count_documents, get_file_details, delete_files
 from database.users_chats_db import db
 from datetime import datetime, timedelta
-from info import OWNER_USERNAME, IS_PREMIUM, URL, BIN_CHANNEL, SECOND_FILES_DATABASE_URL, INDEX_CHANNELS, ADMINS, IS_VERIFY, VERIFY_TUTORIAL, VERIFY_EXPIRE, SHORTLINK_API, SHORTLINK_URL, DELETE_TIME, SUPPORT_LINK, UPDATES_LINK, LOG_CHANNEL, PICS, IS_STREAM, REACTIONS, PM_FILE_DELETE_TIME
-from utils import is_premium, upload_image, get_settings, get_size, is_subscribed, is_check_admin, get_shortlink, get_verify_status, update_verify_status, save_group_settings, temp, get_readable_time, get_wish, get_seconds
+from info import EFFECT_IDS, OWNER_USERNAME, IS_PREMIUM, URL, BIN_CHANNEL, SECOND_FILES_DATABASE_URL, INDEX_CHANNELS, ADMINS, IS_VERIFY, VERIFY_TUTORIAL, VERIFY_EXPIRE, SHORTLINK_API, SHORTLINK_URL, DELETE_TIME, SUPPORT_LINK, UPDATES_LINK, LOG_CHANNEL, PICS, IS_STREAM, REACTIONS, PM_FILE_DELETE_TIME
+from utils import get_poster, is_premium, upload_image, get_settings, get_size, is_subscribed, is_check_admin, get_shortlink, get_verify_status, update_verify_status, save_group_settings, temp, get_readable_time, get_wish, get_seconds
+import PTN
 
 
 @Client.on_message(filters.command("start") & filters.incoming)
@@ -68,7 +69,8 @@ async def start(client, message):
             photo=random.choice(PICS),
             caption=script.START_TXT.format(message.from_user.mention, get_wish()),
             reply_markup=reply_markup,
-            parse_mode=enums.ParseMode.HTML
+            parse_mode=enums.ParseMode.HTML,
+            effect_id=int(random.choice(EFFECT_IDS))
         )
         return
 
@@ -256,21 +258,52 @@ async def start(client, message):
 async def link(bot, message):
     msg = message.reply_to_message
     if not msg:
-        return await message.reply('Reply to media')
+        return await message.reply('Reply to a media file.')
+        
+    m=await message.reply('Processing.....')
     try:
         media = getattr(msg, msg.media.value)
-        msg = await bot.send_cached_media(chat_id=BIN_CHANNEL, file_id=media.file_id)
-        watch = f"{URL}watch/{msg.id}"
-        download = f"{URL}download/{msg.id}"
-        btn=[[
+        vidking_url = None
+        if media.file_name:
+            parsed = PTN.parse(media.file_name)
+            title = parsed.get('title')
+            year = parsed.get('year')
+            season = parsed.get('season')
+            episode = parsed.get('episode')
+            if title:
+                query = str(title)
+                if year:
+                    query += f" {year}"
+                poster_data = await get_poster(query)
+                if poster_data:
+                    tmdb_id = poster_data['tmdb_id']
+                    if season is not None:
+                        if episode is not None:
+                            vidking_url = f"https://www.vidking.net/embed/tv/{tmdb_id}/{season}/{episode}?episodeSelector=true"
+                        else:
+                            vidking_url = f"https://www.vidking.net/embed/tv/{tmdb_id}/{season}/1?episodeSelector=true"
+                    else:
+                        vidking_url = f"https://www.vidking.net/embed/movie/{tmdb_id}"
+
+        bin_msg = await bot.send_cached_media(chat_id=BIN_CHANNEL, file_id=media.file_id)
+        watch = f"{URL}watch/{bin_msg.id}"
+        download = f"{URL}download/{bin_msg.id}"
+        btn = []
+        if vidking_url:
+            btn.append([
+                InlineKeyboardButton("🌐 Smart Player 🌐", url=vidking_url)
+            ])
+        btn.append([
             InlineKeyboardButton("ᴡᴀᴛᴄʜ ᴏɴʟɪɴᴇ", url=watch),
             InlineKeyboardButton("ꜰᴀsᴛ ᴅᴏᴡɴʟᴏᴀᴅ", url=download)
-        ],[
+        ])
+        btn.append([
             InlineKeyboardButton('❌ ᴄʟᴏsᴇ ❌', callback_data='close_data')
-        ]]
-        await message.reply('Here is your link', reply_markup=InlineKeyboardMarkup(btn))
-    except:
-        await message.reply('Unsupported file')
+        ])
+        await m.edit('Here are your links:', reply_markup=InlineKeyboardMarkup(btn))
+    except Exception as e:
+        await m.edit(f'An error occurred: {e}')
+
 
 @Client.on_message(filters.command('index_channels'))
 async def channels_info(bot, message):
