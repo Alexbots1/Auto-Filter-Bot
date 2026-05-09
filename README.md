@@ -145,8 +145,7 @@ sudo docker logs Auto-Filter-Bot
 </details>
 
 ## Support
-* [![Support](https://img.shields.io/static/v1?label=Support&message=Group&color=critical)](https://t.me/HA_Bots_Labs_Support)
-* [![Updates](https://img.shields.io/static/v1?label=Updates&message=Channel&color=critical)](https://t.me/HA_Bots_Labs)
+* [![Support](https://img.shields.io/static/v1?label=Support&message=Group&color=critical)](https://t.me/HA_Bots_Lab)
 
 ## Credits 
 * [![EvaMaria](https://img.shields.io/static/v1?label=EvaMaria&message=Developers&color=critical)](https://t.me/TeamEvamaria)
