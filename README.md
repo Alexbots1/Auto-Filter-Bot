@@ -27,9 +27,8 @@
 - [x] 𝐴𝑢𝑡𝑜 𝐷𝑒𝑙𝑒𝑡𝑒
 - [x] 𝐴𝑛𝑑 𝑀𝑜𝑟𝑒...
 
-## Demo Bot(s)
-* [Demo Bot 1](https://t.me/TestbotAf_bot)
-* [Demo Bot 2](https://t.me/HA_Auto_Filter_Test_Bot)
+## Demo Bot
+* [![Demo](https://img.shields.io/static/v1?label=Demo&message=Bot&color=critical)](https://t.me/TestbotAf_bot)
 
 ## 𝐶𝑜𝑚𝑚𝑎𝑛𝑑𝑠
 ```
@@ -146,8 +145,8 @@ sudo docker logs Auto-Filter-Bot
 </details>
 
 ## Support
-* [![Support](https://img.shields.io/static/v1?label=Support&message=Group&color=critical)](https://t.me/HA_Bots_Support)
-* [![Updates](https://img.shields.io/static/v1?label=Updates&message=Channel&color=critical)](https://t.me/HA_Bots)
+* [![Support](https://img.shields.io/static/v1?label=Support&message=Group&color=critical)](https://t.me/HA_Bots_Labs_Support)
+* [![Updates](https://img.shields.io/static/v1?label=Updates&message=Channel&color=critical)](https://t.me/HA_Bots_Labs)
 
 ## Credits 
 * [![EvaMaria](https://img.shields.io/static/v1?label=EvaMaria&message=Developers&color=critical)](https://t.me/TeamEvamaria)
