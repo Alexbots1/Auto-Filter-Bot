@@ -245,6 +245,9 @@ class Database:
             await self.stg.update_one({'id': BOT_ID}, {'$set': {var: val}})
 
     async def get_bot_sttgs(self):
-        return await self.stg.find_one({'id': BOT_ID})
+        stg = await self.stg.find_one({'id': BOT_ID})
+        if not stg:
+            return {}
+        return stg
 
 db = Database()

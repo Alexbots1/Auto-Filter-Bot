@@ -1,16 +1,16 @@
 import math
 import secrets
 import mimetypes
-from info import BIN_CHANNEL, MAX_BTN
-from utils import temp, get_size, handle_next_back
+from info import BIN_CHANNEL, MAX_BTN, PREMIUM_PLANS, PAYMENT_QR_CODE, PAYMENT_ID, PAYMENT_TYPE, OWNER_USERNAME
+from utils import temp, get_size, handle_next_back, get_plan_name
 from aiohttp import web
 from web.utils.custom_dl import TGCustomYield, chunk_size, offset_fix
-from web.utils.render_template import media_watch, error_tmplt, webapp_template
+from web.utils.render_template import media_watch, error_tmplt, webapp_template, payment_template
 from database.ia_filterdb import get_search_results
-
+import json, io
+from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 routes = web.RouteTableDef()
-
 
 @routes.get("/watch/{message_id}")
 async def watch_handler(request):
@@ -32,6 +32,61 @@ async def download_handler(request):
 @routes.get("/", allow_head=True)
 async def webapp_route_handler(request):
     return web.Response(text=webapp_template, content_type='text/html')
+
+
+routes = web.RouteTableDef()
+
+@routes.get("/activate-plan", allow_head=True)
+async def activate_plan_handler(request):
+    FRONTEND_PLANS = {}
+    for days, details in PREMIUM_PLANS.items():
+        nice_name = get_plan_name(days)
+        FRONTEND_PLANS[str(days)] = [nice_name, details[0], details[1]]
+
+    html_content = payment_template.replace('{{QR_IMG}}', PAYMENT_QR_CODE)
+    html_content = html_content.replace('{{PAYM_ID}}', PAYMENT_ID)
+    html_content = html_content.replace('{{PAYM_TYPE}}', PAYMENT_TYPE)
+    html_content = html_content.replace('{{PLANS_JSON}}', json.dumps(FRONTEND_PLANS))
+    
+    return web.Response(text=html_content, content_type='text/html')
+
+@routes.post("/submit-payment")
+async def submit_payment_handler(request):
+    try:
+        data = await request.post()
+        days_str = data.get('days') 
+        user_id = data.get('user_id')
+        user_name = data.get('user_name')
+        slip_field = data.get('slip')
+        plan_days = int(days_str) if days_str and days_str.isdigit() else 0
+        
+        if plan_days not in PREMIUM_PLANS:
+            return web.json_response({"status": "error", "message": "Invalid plan selected."}, status=400)
+            
+        if not slip_field:
+            return web.json_response({"status": "error", "message": "No slip uploaded."}, status=400)
+
+        file_bytes = slip_field.file.read()
+        if len(file_bytes) > 5242880:
+            return web.json_response({"status": "error", "message": "Image too large. Max 5MB."}, status=413)
+        
+        photo_io = io.BytesIO(file_bytes)
+        photo_io.name = f"{user_id}_payment_slip.jpg" 
+        bot_plan_name = get_plan_name(plan_days)
+        btn = [[
+            InlineKeyboardButton('✅ Accept', callback_data=f'accept_payment-{user_id}-{plan_days}'),
+            InlineKeyboardButton('❌ Reject', callback_data=f'reject_payment-{user_id}-{plan_days}'),
+        ]]
+        text = f"""💰 New Payment Received!\n\nUser: <a href="tg://user?id={user_id}">{user_name}</a>\nUser ID: <code>{user_id}</code>\nPlan: {bot_plan_name} ({plan_days} Days)"""
+        await temp.BOT.send_photo(chat_id=OWNER_USERNAME, photo=photo_io, caption=text, reply_markup=InlineKeyboardMarkup(btn))
+        await temp.BOT.send_message(chat_id=int(user_id), text=f"Thank you! Your payment slip has been sent to the owner. Once it is verified, your Premium Plan [{bot_plan_name}] will be activated soon.\n\nSupport: @{OWNER_USERNAME}")
+        
+        return web.json_response({"status": "success"})
+        
+    except Exception as e:
+        print(f"Server Error: {e}")
+        return web.json_response({"status": "error", "message": "Server error processing payload."}, status=500)
+
 
 @routes.get("/api/search")
 async def api_search_handler(request):

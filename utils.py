@@ -28,6 +28,22 @@ class temp(object):
     PREMIUM = {}
 
 
+def get_plan_name(days):
+    plan_names = {
+        7: "1 Week",
+        14: "2 Weeks",
+        21: "3 Weeks",
+        30: "1 Month",
+        60: "2 Months",
+        90: "3 Months",
+        180: "6 Months",
+        365: "1 Year"
+    }
+    if days in plan_names:
+        return f"{plan_names[days]} Plan"
+    return f"{days} Days Plan"
+
+
 async def send_update(title, year):
     if not UPDATES_SEND_CHANNEL:
         return
@@ -83,7 +99,7 @@ async def is_subscribed(bot, query):
             btn.append(
                 [InlineKeyboardButton(f'Join : {chat.title}', url=chat.invite_link)]
             )
-    if stg and stg.get('REQUEST_FORCE_SUB_CHANNELS') and not db.find_join_req(query.from_user.id):
+    if stg and stg.get('REQUEST_FORCE_SUB_CHANNELS') and not await db.find_join_req(query.from_user.id):
         id = stg.get('REQUEST_FORCE_SUB_CHANNELS')
         chat = await bot.get_chat(int(id))
         try:
@@ -223,7 +239,7 @@ async def get_poster(query, bulk=False, id=False, file=None):
     else:
         runtime = list_to_str(data.get("episode_run_time"))
 
-    plot = data.get("overview")
+    plot = data.get("overview") if LONG_IMDB_DESCRIPTION else str(data.get("overview"))[:200]
 
     rating = data.get("vote_average")
     votes = data.get("vote_count")
@@ -276,10 +292,10 @@ async def is_premium(user_id, bot):
         return True
     if user_id in ADMINS:
         return True
-    mp = db.get_plan(user_id)
+    mp = await db.get_plan(user_id)
     if mp['premium']:
         if mp['expire'] < datetime.now():
-            await bot.send_message(user_id, f"Your premium {mp['plan']} plan is expired in {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}, use /plan to activate new plan again")
+            await bot.send_message(user_id, f"Your premium {mp['plan']} is expired in {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}, use /plan to activate new plan again")
             mp['expire'] = ''
             mp['plan'] = ''
             mp['premium'] = False
@@ -299,7 +315,7 @@ async def check_premium(bot):
                 try:
                     await bot.send_message(
                         p['id'],
-                        f"Your premium {mp['plan']} plan is expired in {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}, use /plan to activate new plan again"
+                        f"Your premium {mp['plan']} is expired in {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}, use /plan to activate new plan again"
                     )
                 except Exception:
                     pass

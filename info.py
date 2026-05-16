@@ -151,15 +151,20 @@ REACTIONS = [reactions for reactions in environ.get('REACTIONS', '🤝 😇 🤗
 EFFECT_IDS = [effect for effect in environ.get('EFFECT_IDS', '5104841245755180586 5104858069142078462 5159385139981059251 5046509860389126442 5046589136895476101 5107584321108051014').split()]
 
 # for Premium 
-IS_PREMIUM = is_enabled('IS_PREMIUM', False)
+IS_PREMIUM = is_enabled('IS_PREMIUM', True)
 OWNER_USERNAME = environ.get("OWNER_USERNAME", "Hansaka_Anuhas")
+PAYMENT_QR_CODE = "https://i.postimg.cc/4xmm21x5/qr-code.jpg" # add your payment qr code link, like upi qr code or any crypto qr code link
+PAYMENT_ID = "mypayment@id"  # add your payment id like upi id or crypto address
 
-# Telegram Stars required to purchase Premium plans
-ONE_WEEK_STARS = int(environ.get("ONE_WEEK_STARS", "30"))
-ONE_MONTH_STARS = int(environ.get("ONE_MONTH_STARS", "55"))
-THREE_MONTHS_STARS = int(environ.get("THREE_MONTHS_STARS", "120"))
-SIX_MONTHS_STARS = int(environ.get("SIX_MONTHS_STARS", "220"))
-ONE_YEAR_STARS = int(environ.get("ONE_YEAR_STARS", "400"))
+# Format -- Days: ['CURRENCY', Price]
+PREMIUM_PLANS = {
+    7: ['USD', 1], 
+    14: ['USD', 2],
+    30: ['USD', 3],
+    365: ['USD', 10]
+}
+PAYMENT_TYPE = "UPI"  # can be changed to "Crypto (TRC20)" or "PayPal" or etc....
+
 
 # for TMDb
 TMDB_API_KEY = environ.get("TMDB_API_KEY", "")  # Get API key from here - https://www.themoviedb.org/settings/api

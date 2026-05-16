@@ -999,6 +999,243 @@ error_tmplt = """<!DOCTYPE html>
 """
 
 
+
+payment_template = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activate Premium</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color, #121212);
+            color: var(--tg-theme-text-color, #ffffff);
+            margin: 0; padding: 20px; text-align: center;
+        }
+        
+        #block-screen { display: none; margin-top: 50px; color: #ff4d4d; }
+        #app-content { display: none; } 
+
+        .profile-pic { 
+            border-radius: 50%; width: 80px; height: 80px; object-fit: cover; 
+            border: 2px solid var(--tg-theme-button-color, #3390ec); margin-bottom: 10px;
+        }
+        .user-name { font-size: 20px; font-weight: 600; margin-bottom: 25px; }
+
+        .plan-btn, .action-btn {
+            display: block; width: 100%; padding: 16px; margin: 10px 0;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .plan-btn:active, .action-btn:active { transform: scale(0.98); opacity: 0.8; }
+        .action-btn { background-color: #34c759; } 
+        .action-btn:disabled { background-color: #555; cursor: not-allowed; }
+        
+        #payment-section, #slip-section { display: none; margin-top: 15px; }
+        .qr-img { width: 220px; max-width: 100%; border-radius: 12px; margin: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .instruction-text { font-size: 15px; opacity: 0.85; margin: 5px 0 15px 0; }
+
+        .copy-box {
+            background-color: var(--tg-theme-secondary-bg-color, #2c2c2e);
+            border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+            padding: 14px; margin: 15px 0; display: flex; align-items: center;
+            justify-content: space-between; cursor: pointer; word-break: break-all;
+        }
+        .copy-text { font-family: monospace; font-size: 14px; text-align: left; flex: 1; margin-right: 10px; color: var(--tg-theme-text-color, #fff); }
+        .copy-icon { width: 20px; height: 20px; fill: var(--tg-theme-button-color, #3390ec); flex-shrink: 0; }
+        
+        .file-upload-wrapper { margin: 20px 0; }
+        input[type="file"] {
+            background: var(--tg-theme-secondary-bg-color, #2c2c2e);
+            padding: 12px; border-radius: 8px; width: 90%; color: var(--tg-theme-text-color, #fff);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="block-screen">
+        <h2>Access Denied 🛑</h2>
+        <p>Please open this inside the Telegram App.</p>
+    </div>
+
+    <div id="app-content">
+        <img id="user-pic" class="profile-pic" alt="Profile">
+        <div id="user-name" class="user-name">Loading...</div>
+
+        <!-- Step 1: Plans Configuration Layout -->
+        <div id="plans-section">
+            <h3>Select a Premium Plan</h3>
+            <div id="buttons-container"></div>
+        </div>
+
+        <!-- Step 2: Payment Details Layout -->
+        <div id="payment-section">
+            <h3>Complete Your Payment</h3>
+            <p class="instruction-text">Selected: <strong id="selected-plan-text"></strong></p>
+            
+            <img src="{{QR_IMG}}" alt="Payment QR" class="qr-img">
+            
+            <p class="instruction-text">Scan the QR code or tap below to copy the <strong>{{PAYM_TYPE}}</strong> credentials:</p>
+            
+            <div class="copy-box" onclick="copyAddress()">
+                <div class="copy-text" id="pay-address">{{PAYM_ID}}</div>
+                <svg class="copy-icon" viewBox="0 0 24 24">
+                    <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                </svg>
+            </div>
+            
+            <button class="action-btn" onclick="goToSlipSection()">I Have Paid, Next Step</button>
+            <button class="plan-btn" style="background-color: transparent; border: 1px solid gray;" onclick="goBackToPlans()">Cancel</button>
+        </div>
+
+        <!-- Step 3: Transaction Upload Layout -->
+        <div id="slip-section">
+            <h3>Upload Payment Slip</h3>
+            <p class="instruction-text">Please provide a confirmation screenshot of your transfer.</p>
+            <div class="file-upload-wrapper">
+                <input type="file" id="slip-file" accept="image/png, image/jpeg, image/webp">
+            </div>
+            <button id="submit-btn" class="action-btn" onclick="submitPayment()">Submit for Verification</button>
+        </div>
+    </div>
+
+    <script>
+        // ── Fallback avatar: inline SVG, no external request needed ──────────
+        const FALLBACK_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Crect width='80' height='80' rx='40' fill='%233390ec'/%3E%3Ccircle cx='40' cy='30' r='16' fill='%23fff'/%3E%3Cellipse cx='40' cy='70' rx='26' ry='20' fill='%23fff'/%3E%3C/svg%3E";
+
+        const tg = window.Telegram.WebApp;
+        tg.expand(); 
+
+        if (!tg.initData) {
+            document.getElementById('block-screen').style.display = 'block';
+        } else {
+            document.getElementById('app-content').style.display = 'block';
+        }
+
+        let currentPlanDays = "0"; 
+        let tgUserId = "unknown";
+        let tgUserName = "User";
+
+        const userPicEl = document.getElementById('user-pic');
+
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            tgUserId   = user.id;
+            tgUserName = user.first_name + (user.last_name ? ' ' + user.last_name : '');
+            document.getElementById('user-name').innerText = tgUserName;
+
+            if (user.photo_url) {
+                // Try loading the real photo; fall back to SVG if it fails
+                userPicEl.src = user.photo_url;
+                userPicEl.onerror = () => { userPicEl.src = FALLBACK_AVATAR; };
+            } else {
+                userPicEl.src = FALLBACK_AVATAR;
+            }
+        } else {
+            userPicEl.src = FALLBACK_AVATAR;
+        }
+
+        const plans = {{PLANS_JSON}};
+        const container = document.getElementById('buttons-container');
+
+        for (const [daysStr, details] of Object.entries(plans)) {
+            const planName = details[0];
+            const currency = details[1];
+            const price    = details[2];
+            
+            const btn = document.createElement('button');
+            btn.className = 'plan-btn';
+            btn.innerText = `${planName.toUpperCase()} - ${currency} ${price}`;
+            
+            btn.onclick = () => {
+                currentPlanDays = daysStr; 
+                document.getElementById('plans-section').style.display  = 'none';
+                document.getElementById('payment-section').style.display = 'block';
+                document.getElementById('selected-plan-text').innerText  = `${planName} (${currency} ${price})`;
+            };
+            container.appendChild(btn);
+        }
+
+        function copyAddress() {
+            const address = document.getElementById('pay-address').innerText;
+            navigator.clipboard.writeText(address).then(() => {
+                tg.showAlert("✅ Copied to clipboard!");
+            }).catch(err => {
+                console.error("Failed to copy", err);
+            });
+        }
+
+        function goToSlipSection() {
+            document.getElementById('payment-section').style.display = 'none';
+            document.getElementById('slip-section').style.display    = 'block';
+        }
+        
+        function goBackToPlans() {
+            document.getElementById('payment-section').style.display = 'none';
+            document.getElementById('plans-section').style.display   = 'block';
+        }
+
+        async function submitPayment() {
+            const fileInput = document.getElementById('slip-file');
+            if (!fileInput.files.length) {
+                tg.showAlert("⚠️ Please upload a screenshot of your payment.");
+                return;
+            }
+
+            const file = fileInput.files[0];
+            if (file.size > 5 * 1024 * 1024) {
+                tg.showAlert("⚠️ File is too large. Please upload an image under 5MB.");
+                return;
+            }
+
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.innerText  = "⏳ Uploading... Please wait";
+            submitBtn.disabled   = true;
+
+            const formData = new FormData();
+            formData.append("days",      currentPlanDays); 
+            formData.append("user_id",   tgUserId);
+            formData.append("user_name", tgUserName);
+            formData.append("slip",      file);
+
+            try {
+                const response = await fetch("/submit-payment", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok && result.status === "success") {
+                    tg.showAlert("✅ Slip uploaded successfully! Your plan will be activated after verification.", () => {
+                        tg.close();
+                    });
+                } else {
+                    tg.showAlert("❌ " + (result.message || "Error uploading slip. Please try again."));
+                    resetButton();
+                }
+            } catch (error) {
+                tg.showAlert("🔌 Network error. Please check your connection and try again.");
+                resetButton();
+            }
+            
+            function resetButton() {
+                submitBtn.innerText = "Submit for Verification";
+                submitBtn.disabled  = false;
+            }
+        }
+    </script>
+</body>
+</html>
+"""
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Backend helpers
 # ─────────────────────────────────────────────────────────────────────────────

@@ -11,7 +11,7 @@ from database.ia_filterdb import db_count_documents, second_db_count_documents, 
 from database.users_chats_db import db
 from datetime import datetime, timedelta
 from info import EFFECT_IDS, OWNER_USERNAME, IS_PREMIUM, URL, BIN_CHANNEL, SECOND_FILES_DATABASE_URL, INDEX_CHANNELS, ADMINS, IS_VERIFY, VERIFY_TUTORIAL, VERIFY_EXPIRE, SHORTLINK_API, SHORTLINK_URL, DELETE_TIME, SUPPORT_LINK, UPDATES_LINK, LOG_CHANNEL, PICS, IS_STREAM, REACTIONS, PM_FILE_DELETE_TIME
-from utils import get_poster, is_premium, upload_image, get_settings, get_size, is_subscribed, is_check_admin, get_shortlink, get_verify_status, update_verify_status, save_group_settings, temp, get_readable_time, get_wish, get_seconds
+from utils import get_plan_name, get_poster, is_premium, upload_image, get_settings, get_size, is_subscribed, is_check_admin, get_shortlink, get_verify_status, update_verify_status, save_group_settings, temp, get_readable_time, get_wish, get_seconds
 import PTN
 
 
@@ -470,16 +470,15 @@ async def ping(client, message):
 async def myplan(client, message):
     if not IS_PREMIUM:
         return await message.reply('Premium feature was disabled by admin')
-    mp = db.get_plan(message.from_user.id)
+    mp = await db.get_plan(message.from_user.id)
     if not await is_premium(message.from_user.id, client):
         btn = [[
             InlineKeyboardButton('Activate Trial', callback_data='activate_trial'),
             InlineKeyboardButton('Activate Plan', callback_data='activate_plan')
         ]]
         return await message.reply('You dont have any premium plan, please use /plan to activate plan', reply_markup=InlineKeyboardMarkup(btn))
-    if mp['plan'] == "" or mp['expire'] == "":
-        return await message.reply("You are already a Premium user!")
-    await message.reply(f"You activated {mp['plan']} plan\nExpire: {mp['expire'].strftime('%Y.%m.%d %H:%M:%S')}")
+    ex = mp.get('expire').strftime('%Y.%m.%d %H:%M:%S') if mp.get('expire') else 'Unknow'
+    await message.reply(f"You activated {mp.get('plan') or 'Unknow plan'}\nExpire: {ex}")
 
 
 @Client.on_message(filters.command('plan') & filters.private)
@@ -513,10 +512,10 @@ async def add_prm(bot, message):
     if user.id in ADMINS:
         return await message.reply('ADMINS is already premium')
     if not await is_premium(user.id, bot):
-        mp = db.get_plan(user.id)
+        mp = await db.get_plan(user.id)
         ex = datetime.now() + timedelta(days=d)
         mp['expire'] = ex
-        mp['plan'] = f'{d} days'
+        mp['plan'] = get_plan_name(d)
         mp['premium'] = True
         await db.update_plan(user.id, mp)
         await message.reply(f"Given premium to {user.mention}\nExpire: {ex.strftime('%Y.%m.%d %H:%M:%S')}")
@@ -546,7 +545,7 @@ async def rm_prm(bot, message):
     if not await is_premium(user.id, bot):
         await message.reply(f"{user.mention} is not premium user")
     else:
-        mp = db.get_plan(user.id)
+        mp = await db.get_plan(user.id)
         mp['expire'] = ''
         mp['plan'] = ''
         mp['premium'] = False
