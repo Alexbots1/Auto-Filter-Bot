@@ -34,8 +34,6 @@ async def webapp_route_handler(request):
     return web.Response(text=webapp_template, content_type='text/html')
 
 
-routes = web.RouteTableDef()
-
 @routes.get("/activate-plan", allow_head=True)
 async def activate_plan_handler(request):
     FRONTEND_PLANS = {}

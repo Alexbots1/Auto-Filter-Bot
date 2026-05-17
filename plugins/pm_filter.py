@@ -458,9 +458,9 @@ async def cb_handler(client: Client, query: CallbackQuery):
             InlineKeyboardButton('💳 Pay using WebApp', web_app=WebAppInfo(url=URL + 'activate-plan'))
         ]]
         if await is_premium(query.from_user.id, client):
-            txt = f"You can activate the premium plan using our WebApp (For any inquiries — @{OWNER_USERNAME})\n\nNote - You are already a Premium user!" 
+            txt = f"You can activate the premium plan using our WebApp\n\nSupport — @{OWNER_USERNAME}\n\nNote - You are already a Premium user!" 
         else:
-            txt = f"You can activate the premium plan using our WebApp (For any inquiries — @{OWNER_USERNAME})" 
+            txt = f"You can activate the premium plan using our WebApp\n\nSupport — @{OWNER_USERNAME}" 
         await query.message.edit(txt, reply_markup=InlineKeyboardMarkup(btn))
 
     elif query.data.startswith("accept_payment"):

@@ -110,6 +110,9 @@ No shortlink
 Admins support
 And more...
 
+Available Plans:
+<blockquote>{}</blockquote>
+
 Support: @{}"""
 
     USER_COMMAND_TXT = """<b>Here is bot user commands 👇
